@@ -1,4 +1,3 @@
-import { neon } from '@neondatabase/serverless';
 import { HttpError } from './util.js';
 import { SCHEMA_STATEMENTS } from './schema.js';
 
