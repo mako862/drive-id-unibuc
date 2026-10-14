@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { neon } from 'postgresql://neondb_owner:npg_ZAw9L2bXiHCp@ep-dry-feather-za6995gc-pooler.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 import { HttpError } from './util.js';
 import { SCHEMA_STATEMENTS } from './schema.js';
 
