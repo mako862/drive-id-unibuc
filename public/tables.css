@@ -1,6 +1,0 @@
-/* Stiluri pentru secțiunea „Tabele publice” */
-.pt-wrap { overflow: auto; max-height: 70vh; border: 1px solid #e2e8f0; border-radius: 12px; }
-.pt-table { border-collapse: collapse; font-size: 14px; width: max-content; min-width: 100%; }
-.pt-table th, .pt-table td { border: 1px solid #e2e8f0; padding: 6px 10px; vertical-align: top; }
-.pt-table th { background: #f1f5f9; text-align: left; font-weight: 600; position: sticky; top: 0; }
-.pt-table tr:nth-child(even) td { background: #f8fafc; }
