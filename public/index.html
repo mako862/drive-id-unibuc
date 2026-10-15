@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drept UniBuc - Cloud Drive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/tables.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+            .viewer-full { max-width: none !important; width: 100vw !important; height: 100vh !important; max-height: none !important; border-radius: 0 !important; }
+        #viewerBox { max-height: 94dvh; }
+        #previewContent { display: flex; flex-direction: column; min-height: 0; }
+        #previewBody { height: 65dvh; max-height: 70dvh; min-height: 0; flex: 1 1 auto; }
+        .viewer-full { height: 100dvh !important; max-height: 100dvh !important; }
+        .viewer-full #previewBody { height: auto !important; max-height: none !important; }
+        .document-reader p, .document-reader ul, .document-reader ol { margin-bottom: 1em; }
+        .document-reader h1, .document-reader h2, .document-reader h3 { font-weight: 700; margin: 1em 0 .5em; }
+        .document-reader h1 { font-size: 1.75em; }
+        .document-reader h2 { font-size: 1.4em; }
+        .document-reader ul { list-style: disc; padding-left: 1.5em; }
+        .document-reader ol { list-style: decimal; padding-left: 1.5em; }
+        .document-reader td, .document-reader th { border: 1px solid #cbd5e1; padding: .5em; }
+        .document-reader img { max-width: 100%; height: auto; }
+        dialog::backdrop { background: rgb(15 23 42 / .5); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden" onclick="closeAllContextMenus(event)">
+
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-6 z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <button id="sidebarToggle" class="lg:hidden text-slate-600 hover:text-blue-600 p-2 rounded-lg hover:bg-slate-100 transition">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-900 text-lg leading-tight">Drept UniBuc</h1>
+                    <span class="text-xs text-slate-500 font-medium">BETA Drive Workspace</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 max-w-xl mx-4 hidden md:block">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="Caută fișiere, foldere, audio, video..." class="w-full pl-10 pr-4 py-2 bg-slate-100 border border-transparent rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none transition">
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <div id="authStatusBadge" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">
+                <i class="fa-solid fa-user"></i>
+                <span id="authStatusText">Utilizator Standard</span>
+            </div>
+            <button id="authBtn" onclick="openAuthModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm transition flex items-center space-x-2">
+                <i class="fa-solid fa-lock text-xs"></i>
+                <span id="authBtnText">Autentificare</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Drawer Overlay -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/40 z-20 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 w-72 bg-white border-r border-slate-200 flex flex-col z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 shrink-0">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between lg:hidden">
+                <span class="font-bold text-slate-800">Meniu</span>
+                <button onclick="toggleSidebar()" class="text-slate-500 hover:text-slate-700 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-1 overflow-y-auto flex-1 custom-scrollbar">
+                <div class="text-xs font-semibold text-slate-400 uppercase px-3 pb-2">Navigare</div>
+                <button onclick="switchView('all')" id="nav-all" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition">
+                    <i class="fa-solid fa-folder-open w-5 text-center"></i>
+                    <span>Toate Fișierele</span>
+                </button>
+                <button onclick="switchView('pending')" id="nav-pending" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition relative">
+                    <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
+                    <span>În Așteptare (Pending)</span>
+                    <span id="pendingBadge" class="ml-auto bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-bold hidden">0</span>
+                </button>
+                <button onclick="switchView('links')" id="nav-links" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-link w-5 text-center"></i>
+                    <span>Linkuri utile</span>
+                </button>
+                
+                <button onclick="switchView('tables')" id="nav-tables" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-table w-5 text-center"></i>
+                    <span>Tabele publice</span>
+                </button>
+                <div class="pt-4 text-xs font-semibold text-slate-400 uppercase px-3 pb-2">Filtre Rapide</div>
+                <button onclick="filterByType('all')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-file w-5 text-center text-slate-400"></i>
+                    <span>Toate Formatele</span>
+                </button>
+                <button onclick="filterByType('audio')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-music w-5 text-center text-purple-500"></i>
+                    <span>Audio & Podcast</span>
+                </button>
+                <button onclick="filterByType('video')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-video w-5 text-center text-red-500"></i>
+                    <span>Video</span>
+                </button>
+                <button onclick="filterByType('image')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-image w-5 text-center text-emerald-500"></i>
+                    <span>Imagini</span>
+                </button>
+                <button onclick="filterByType('document')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-file-pdf w-5 text-center text-amber-500"></i>
+                    <span>Documente & PDF</span>
+                </button>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+                <div class="flex items-center justify-between text-xs text-slate-500 mb-1 font-medium">
+                    <span>Stocare online comună</span>
+                    <span id="storageUsed">Conectare...</span>
+                </div>
+                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="storageBar" class="bg-blue-600 h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-white lg:rounded-tl-2xl lg:border-t lg:border-l lg:border-slate-200 shadow-inner">
+            
+            <button id="importLocalBtn" onclick="importLocalFiles()" class="hidden self-start mx-4 my-2 text-xs text-blue-800 underline font-semibold">Importă fișierele vechi din acest browser</button>
+            <!-- Toolbar & Breadcrumbs -->
+            <div id="fileToolbar" class="p-4 lg:p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="folderBackBtn" onclick="navigateToParent()" disabled aria-label="Înapoi la folderul părinte" class="shrink-0 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i><span>Înapoi</span>
+                    </button>
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0" id="breadcrumbs">
+                    <button onclick="navigateTo('root')" class="text-blue-600 font-semibold hover:underline flex items-center space-x-1">
+                        <i class="fa-solid fa-house"></i>
+                        <span>Root</span>
+                    </button>
+                </div>
+                </div>
+
+                <div class="flex items-center flex-wrap gap-2">
+                    <button id="adminFolderBtn" onclick="openCreateFolderModal()" class="hidden px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition items-center space-x-2">
+                        <i class="fa-solid fa-folder-plus text-blue-600"></i>
+                        <span>Folder nou (admin)</span>
+                    </button>
+                    <button onclick="openUploadModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2 shadow-md shadow-blue-500/20">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Încarcă Fișiere</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Grid Container -->
+            <div class="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar relative">
+                
+                <!-- Sort & View Controls -->
+                <div class="flex flex-col gap-3 mb-4">
+                    <div class="flex items-center justify-between">
+                        <span id="itemCount" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">0 elemente</span>
+                        <div class="flex items-center space-x-2">
+                            <button id="refreshDriveBtn" type="button" onclick="refreshDriveManually()" title="Actualizează pentru a vedea modificările colegilor" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-wait">
+                                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                                <span>Actualizează</span>
+                            </button>
+                            <select id="sortBy" onchange="renderCurrentView()" class="bg-slate-100 border-none rounded-xl text-xs font-semibold px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500">
+                                <option value="name">Sortează după Nume</option>
+                                <option value="date">Sortează după Dată</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Normal View Bulk Action Bar -->
+                    <div id="normalBulkBar" class="hidden items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+                        <label class="flex items-center gap-2 text-xs font-semibold text-blue-800 cursor-pointer">
+                            <input type="checkbox" id="selectAllNormal" onchange="toggleSelectAllNormal(this.checked)" class="w-4 h-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500">
+                            <span>Selectează toate fișierele</span>
+                            <span id="selectedNormalCount" class="text-blue-600 font-bold">(0 selectate)</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button id="bulkDeleteBtn" onclick="deleteSelectedFiles()" class="hidden px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition items-center space-x-1.5"><i class="fa-solid fa-trash"></i><span>Șterge selectate</span></button>
+                            <button data-download-button onclick="downloadSelectedFiles()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Descarcă selectate</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pending View Bulk Action Bar -->
+                    <div id="pendingBulkBar" class="hidden items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        <label class="flex items-center gap-2 text-xs font-semibold text-amber-800 cursor-pointer">
+                            <input type="checkbox" id="selectAllPending" onchange="toggleSelectAllPending(this.checked)" class="w-4 h-4 rounded border-amber-300 text-blue-600 focus:ring-blue-500">
+                            <span>Selectează toate</span>
+                            <span id="selectedPendingCount" class="text-amber-600 font-bold">(0 selectate)</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button onclick="approveSelectedPending()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition">
+                                <i class="fa-solid fa-check mr-1"></i>Aprobă selectatele
+                            </button>
+                            <button onclick="rejectSelectedPending()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition">
+                                <i class="fa-solid fa-xmark mr-1"></i>Respinge selectatele
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <section id="tablesPanel" class="hidden" aria-label="Tabele publice"></section>
+                <section id="linksPanel" class="hidden max-w-4xl mx-auto" aria-labelledby="linksHeading">
+                    <div class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 py-3 mb-5 border-b border-slate-200">
+                        <div class="flex-1 min-w-[140px]">
+                            <h1 id="linksHeading" class="text-xl font-bold text-slate-900">Linkuri utile</h1>
+                            <p class="text-sm text-slate-500 mt-1">Resursele noastre, într-un singur loc. Deschide orice link printr-un click.</p>
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-2 ml-auto">
+                            <button id="addLinkBtn" onclick="openLinkEditor()" class="hidden px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold transition">
+                                <i class="fa-solid fa-plus mr-2"></i>Adaugă link
+                            </button>
+                            <button id="proposeLinkBtn" type="button" onclick="openProposalDialog()" aria-haspopup="dialog" aria-controls="proposalDialog" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">
+                                Propune un link
+                            </button>
+                        </div>
+                    </div>
+                    <form id="linkForm" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-5 space-y-3" onsubmit="saveUsefulLink(event)">
+                        <h2 id="linkFormHeading" class="font-bold text-slate-800">Adaugă link</h2>
+                        <div>
+                            <label for="linkTitle" class="block text-sm font-semibold text-slate-700 mb-1">Titlu</label>
+                            <input id="linkTitle" required maxlength="255" placeholder="De exemplu: Materiale de studiu" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="linkUrl" class="block text-sm font-semibold text-slate-700 mb-1">Adresă (HTTP sau HTTPS)</label>
+                            <input id="linkUrl" type="url" required maxlength="2048" placeholder="https://..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <p id="linkFormError" class="hidden text-sm text-red-600" role="alert"></p>
+                        <div class="flex gap-2">
+                            <button id="saveLinkBtn" type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Salvează</button>
+                            <button id="cancelLinkBtn" type="button" onclick="closeLinkEditor()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 disabled:opacity-50">Anulează</button>
+                        </div>
+                    </form>
+                    <p id="linksStatus" class="text-sm text-slate-500 py-8 text-center" role="status">Se încarcă linkurile...</p>
+                    <ul id="linksList" class="space-y-3"></ul>
+                    <section id="linkReviewPanel" class="hidden mt-8 border-t border-slate-200 pt-5" aria-labelledby="linkReviewHeading">
+                        <h2 id="linkReviewHeading" class="font-bold text-slate-800">Propuneri de linkuri în așteptare</h2>
+                        <p class="text-sm text-slate-500 mt-1">Aprobă o propunere pentru a o publica sau respinge-o pentru a o elimina din așteptare.</p>
+                        <p id="linkReviewStatus" class="text-sm text-slate-500 py-4" role="status">Se încarcă propunerile...</p>
+                        <ul id="linkReviewList" class="space-y-3 mt-4"></ul>
+                    </section>
+                </section>
+
+                <!-- Items Grid -->
+                <div id="itemsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <!-- Dynamically Rendered Folders & Files -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 text-2xl mb-3">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-700 text-base">Niciun element aici</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-xs">Încarcă fișiere sau foldere folosind butonul de sus.</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="bg-white border-t border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-400 shrink-0">
+                <span id="totalUploadedGB" class="font-semibold text-slate-600">Încărcat: 0 GB</span>
+                <span id="lastModFooter">Ultima modificare: Se încarcă...</span>
+            </footer>
+        </main>
+    </div>
+
+    <dialog id="proposalDialog" aria-labelledby="proposalHeading" class="rounded-2xl p-6 w-[calc(100%_-_2rem)] max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl text-slate-800" oncancel="if(submittingProposal)event.preventDefault()">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 id="proposalHeading" class="font-bold text-slate-800 text-lg">Propune un link</h2>
+            <button id="closeProposalBtn" type="button" onclick="closeProposalDialog()" aria-label="Închide formularul" class="px-2 py-1 text-slate-500 hover:text-slate-800 disabled:opacity-50"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <p class="text-sm text-slate-500 mb-4">Oricine poate trimite o resursă, fără autentificare. Linkul apare în lista publică doar după aprobare.</p>
+        <form id="proposalForm" class="space-y-3" onsubmit="submitLinkProposal(event)">
+            <div>
+                <label for="proposalTitle" class="block text-sm font-semibold text-slate-700 mb-1">Titlu</label>
+                <input id="proposalTitle" required maxlength="255" placeholder="De exemplu: Materiale de studiu" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label for="proposalUrl" class="block text-sm font-semibold text-slate-700 mb-1">Adresă (HTTP sau HTTPS)</label>
+                <input id="proposalUrl" type="url" required maxlength="2048" placeholder="https://..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p id="proposalError" class="hidden text-sm text-red-600" role="alert"></p>
+            <p id="proposalSuccess" class="hidden text-sm text-emerald-700" role="status"></p>
+            <button id="submitProposalBtn" type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Trimite propunerea</button>
+        </form>
+    </dialog>
+
+    <dialog id="linkOrderDialog" aria-labelledby="linkOrderHeading" class="rounded-2xl p-6 w-[calc(100%_-_2rem)] max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl text-slate-800" oncancel="if(savingLinkOrder)event.preventDefault();else closeLinkOrderDialog()">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 id="linkOrderHeading" class="font-bold text-slate-800 text-lg">Reordonează linkul</h2>
+            <button id="closeLinkOrderBtn" type="button" onclick="closeLinkOrderDialog()" aria-label="Închide reordonarea" class="px-2 py-1 text-slate-500 hover:text-slate-800 disabled:opacity-50"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <p id="linkOrderTitle" class="font-semibold text-sm break-words mb-2"></p>
+        <p class="text-sm text-slate-500 mb-4">Alege noul număr. Celelalte linkuri se deplasează automat, fără a fi înlocuite.</p>
+        <form onsubmit="saveLinkOrder(event)" class="space-y-3">
+            <label for="linkOrderPosition" class="block text-sm font-semibold text-slate-700">Numărul linkului</label>
+            <select id="linkOrderPosition" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+            <p id="linkOrderStatus" class="text-sm text-slate-500" role="status"></p>
+            <p id="linkOrderError" class="hidden text-sm text-red-600" role="alert"></p>
+            <button id="saveLinkOrderBtn" type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">Reordonează</button>
+        </form>
+    </dialog>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-slate-900 text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-shield-halved text-blue-600"></i>
+                    <span>Autentificare</span>
+                </h3>
+                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <p id="authIntro" class="text-xs text-slate-500 mb-4">Autentifică-te cu contul tău pentru a modifica linkurile. Administrarea documentelor rămâne rezervată administratorilor.</p>
+            
+            <div class="space-y-4">
+                <div id="authEmailField">
+                    <label for="authEmailInput" class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" id="authEmailInput" autocomplete="username" class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div>
+                    <label for="authPasswordInput" class="block text-xs font-semibold text-slate-700 mb-1">Parolă</label>
+                    <input type="password" id="authPasswordInput" autocomplete="current-password" spellcheck="false" placeholder="Introdu parola..." class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="attemptAdminLogin()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/20 transition">
+                        <span id="authLoginLabel">Autentificare</span>
+                    </button>
+                    <button onclick="logoutAdmin()" id="logoutBtn" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-semibold transition hidden">
+                        Ieși din cont
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div id="createFolderModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="font-bold text-slate-900 text-lg mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-folder-plus text-blue-600"></i>
+                <span>Creează Folder Nou</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Introdu denumirea folderului în directorul curent.</p>
+            
+            <input type="text" id="newFolderNameInput" placeholder="Nume folder..." class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none mb-4">
+            
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeCreateFolderModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">Anulează</button>
+                <button onclick="executeCreateFolder()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">Creează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="font-bold text-slate-900 text-lg mb-1 flex items-center space-x-2">
+                <i class="fa-solid fa-cloud-arrow-up text-blue-600"></i><span>Încarcă Fișiere sau Foldere</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Alege folderul în care vor fi încărcate fișierele. Selectarea folderului este obligatorie.</p>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Folder destinație <span class="text-red-500">*</span></label>
+            <select id="uploadFolderSelect" onchange="refreshUploadModal()" class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none mb-3"></select>
+            <p id="uploadNoFolders" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">Nu există încă niciun folder. Un administrator trebuie să creeze cel puțin unul.</p>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fișiere sau folder <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-xl py-4 text-sm font-semibold text-slate-600 cursor-pointer transition">
+                    <i class="fa-solid fa-paperclip"></i><span>Alege fișiere</span>
+                    <input type="file" id="fileInput" multiple class="hidden" onchange="onUploadFilesChosen(event)">
+                </label>
+                <label class="flex items-center justify-center gap-2 border-2 border-dashed border-slate-300 hover:border-emerald-400 rounded-xl py-4 text-sm font-semibold text-slate-600 cursor-pointer transition">
+                    <i class="fa-solid fa-folder-tree text-emerald-600"></i><span>Alege folder</span>
+                    <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden" onchange="onUploadFolderChosen(event)">
+                </label>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">Maximum 5 GB per fișier, inclusiv în foldere. Structura subfolderelor se păstrează. Încărcările necesită aprobarea administratorului.</p>
+            <p class="text-xs text-slate-500 mt-2">Utilizatori standard: 25 GB și 2000 de elemente pe zi per rețea. Administratorii nu au această cotă zilnică.</p>
+            <p id="uploadSummary" class="text-xs font-semibold text-slate-700 mt-3"></p>
+            <ul id="uploadFileList" class="max-h-32 overflow-y-auto text-xs text-slate-600 mt-2 space-y-1"></ul>
+            <div id="uploadProgressPanel" class="hidden mt-3 rounded-xl bg-blue-50 border border-blue-100 p-3" role="status" aria-live="polite">
+                <p id="uploadProgressText" class="text-xs font-semibold text-blue-800 break-words"></p>
+                <progress id="uploadProgress" max="100" value="0" class="w-full h-2 mt-2 accent-blue-600" aria-label="Progresul încărcării"></progress>
+                <p id="uploadProgressDetail" class="text-xs text-blue-700 mt-1"></p>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">Păstrează pagina deschisă în timpul transferului. După o întrerupere, reselectează aceleași fișiere sau același folder, în aceeași filă și destinație, pentru a relua fără a retrimite fragmentele salvate.</p>
+            <div class="flex justify-end space-x-3 mt-4">
+                <button onclick="closeUploadModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">Anulează</button>
+                <button id="uploadPauseBtn" onclick="pauseUpload()" class="hidden px-4 py-2 bg-amber-100 text-amber-800 rounded-xl text-sm font-semibold">Pauză</button>
+                <button id="uploadConfirmBtn" onclick="confirmUpload()" disabled class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">Încarcă</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div id="renameModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="font-bold text-slate-900 text-lg mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-pen text-blue-600"></i>
+                <span>Redenumește Elementul</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Introdu noua denumire.</p>
+            <input type="text" id="renameInput" maxlength="255" placeholder="Nume nou..." class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none mb-4">
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeRenameModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">Anulează</button>
+                <button onclick="executeRenameItem()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move Item Modal -->
+    <div id="moveModal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="font-bold text-slate-900 text-lg mb-2 flex items-center space-x-2">
+                <i class="fa-solid fa-arrow-right-arrow-left text-blue-600"></i>
+                <span>Mută în alt Folder</span>
+            </h3>
+            <p id="moveDescription" class="text-xs text-slate-500 mb-4">Selectează folderul destinație.</p>
+            
+            <select id="moveFolderSelect" class="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:outline-none mb-4">
+                <option value="root">Root (Rădăcină)</option>
+            </select>
+            
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeMoveModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">Anulează</button>
+                <button onclick="executeMoveItem()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">Mută</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview & Gallery Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex items-center justify-center p-2 sm:p-4 backdrop-blur-md" onclick="if(event.target===this)closePreviewModal()">
+        <div id="viewerBox" class="bg-white rounded-2xl max-w-5xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-start justify-between gap-3 bg-slate-50 shrink-0">
+                <div class="min-w-0 flex-1">
+                    <h3 id="previewTitle" class="font-bold text-slate-900 break-words [overflow-wrap:anywhere]">Previzualizare</h3>
+                    <button id="previewFolder" type="button" class="mt-1 text-left text-xs text-blue-700 hover:underline break-words" title="Deschide folderul documentului"></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <div id="zoomTools" class="hidden items-center gap-1">
+                        <button onclick="zoomBy(1/1.4)" title="Micșorează" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                        <span id="zoomLabel" class="text-xs font-semibold text-slate-500 w-10 text-center">100%</span>
+                        <button onclick="zoomBy(1.4)" title="Mărește" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                        <button onclick="setZoom(1)" title="Resetează zoom" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-arrows-rotate"></i></button>
+                    </div>
+                    <a id="openNewTabBtn" href="#" target="_blank" rel="noopener" title="Deschide în filă nouă (zoom complet)" class="hidden w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-up-right-from-square"></i></a>
+                    <button data-download-button onclick="downloadViewerItem()" title="Descarcă" class="px-3 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-download"></i><span class="hidden sm:inline">Descarcă</span></button>
+                    <button onclick="toggleViewerFullscreen()" title="Ecran complet" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"><i class="fa-solid fa-maximize"></i></button>
+                    <button onclick="closePreviewModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+            </div>
+            <div id="previewContent" class="relative flex-1 min-h-0 bg-slate-100">
+                <div id="previewBody" class="h-[75vh] max-h-[80vh] p-4 flex items-center justify-center overflow-hidden"></div>
+            </div>
+            <div id="galleryNavigation" class="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-white shrink-0">
+                <button id="galleryPrevBtn" onclick="navigateGallery(-1)" aria-label="Fișierul anterior" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-chevron-left"></i><span>Anterior</span></button>
+                <span id="previewCounter" aria-live="polite" class="text-xs font-semibold text-slate-500"></span>
+                <button id="galleryNextBtn" onclick="navigateGallery(1)" aria-label="Fișierul următor" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed"><span>Următor</span><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div id="viewerAdminBar" class="hidden items-center justify-between gap-3 px-4 py-2.5 bg-amber-50 border-t border-amber-200">
+                <span class="text-xs font-semibold text-amber-800"><i class="fa-solid fa-clock mr-1"></i>În așteptare — verifică conținutul înainte de decizie</span>
+                <div class="flex gap-2">
+                    <button onclick="viewerDecide(true)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold"><i class="fa-solid fa-check mr-1"></i>Aprobă</button>
+                    <button onclick="viewerDecide(false)" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold"><i class="fa-solid fa-xmark mr-1"></i>Respinge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 z-50 transform translate-y-20 opacity-0 transition-all duration-300">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage" class="text-sm font-medium">Acțiune realizată cu succes!</span>
+    </div>
+
+    <script src="/drive.js" defer></script>
+    <script src="/download-feedback.js" defer></script>
+    <script src="/tables.js" defer></script>
+    <script>
+        // --- AUTHENTICATION ---
+
+        // State Management
+        let db = null;
+        let currentFolderId = 'root';
+        let currentView = 'all';
+        let currentFilter = 'all';
+        let sessionState = {
+            isAuthenticated: false,
+            isAdmin: false
+        };
+        let itemToMoveId = null;
+        let itemToRenameId = null;
+        let previewController = null;
+        let navigationGeneration = 0;
+        let selectedPendingIds = new Set();
+        let selectedNormalIds = new Set();
+        let currentGalleryList = [];
+        let currentGalleryIndex = 0;
+
+        // --- HELPERS ---
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        function fileCategory(item) {
+            const m = item.type || '', n = item.name || '';
+            if (m.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(n)) return 'image';
+            if (m.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(n)) return 'audio';
+            if (m.startsWith('video/') || /\.(mp4|mkv|avi|mov|webm)$/i.test(n)) return 'video';
+            if (m.includes('pdf') || m.startsWith('text/') || /\.(pdf|docx?|txt|csv|tsv|md|json|log|rtf|odt|xlsx?|pptx?)$/i.test(n)) return 'document';
+            return 'other';
+        }
+        const isPdfOrTxt = i => /pdf|text\/plain/.test(i.type || '') || /\.(pdf|txt)$/i.test(i.name || '');
+        function saveBlob(blob, name) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = name;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+        let renderSeq = 0, thumbUrls = [], viewFiles = [], viewerList = [], viewerIndex = 0, pendingUploadFiles = [];
+        let uploadController = null;
+        let usefulLinks = [], editingLinkId = null, savingLink = false;
+        let submittingProposal = false;
+        let orderingLinkId = null, savingLinkOrder = false, linkOrderGeneration = 0;
+
+        async function initDB() {
+            const state = await window.drive.initialize();
+            sessionState.isAuthenticated = state.isAuthenticated;
+            sessionState.isAdmin = state.isAdmin;
+            db = true;
+        }
+
+        async function saveItemToDB(item, options) {
+            await window.drive.save(item, options);
+            updateLastModified();
+        }
+
+        async function getItemFromDB(id) {
+            try {
+                return await window.drive.item(id);
+            } catch (error) {
+                if (error.status === 404) return null;
+                throw error;
+            }
+        }
+
+        async function deleteItemFromDB(id) {
+            await window.drive.remove(id);
+            updateLastModified();
+        }
+
+        async function getAllItemsFromDB() {
+            return window.drive.items();
+        }
+
+        function updateLastModified() {
+            updateStorageStats().catch(error => showToast(error.message, 'error'));
+        }
+
+        async function updateStorageStats() {
+            const items = await getAllItemsFromDB();
+            const uploadedBytes = items.reduce((total, item) => total + (item.isFolder ? 0 : Number(item.size)), 0);
+            document.getElementById('totalUploadedGB').innerText = 'Încărcat: ' + (uploadedBytes / (1024 ** 3)).toFixed(2) + ' GB';
+            document.getElementById('storageUsed').innerText = formatBytes(uploadedBytes);
+            document.getElementById('storageBar').style.width = '100%';
+            const modified = items.reduce((latest, item) => Math.max(latest, Date.parse(item.updatedAt)), 0);
+            document.getElementById('lastModFooter').innerText = modified
+                ? 'Ultima modificare: ' + new Date(modified).toLocaleString('ro-RO')
+                : 'Stocare comună online';
+        }
+
+        async function refreshSharedDrive() {
+            window.drive.invalidate();
+            const state = await window.drive.session();
+            sessionState.isAuthenticated = state.isAuthenticated;
+            sessionState.isAdmin = state.isAdmin;
+            if (!state.isAdmin && currentView === 'pending') currentView = 'all';
+            updateAuthUI();
+            await renderCurrentView();
+            await updateStorageStats();
+        }
+
+        async function refreshDriveManually() {
+            const button = document.getElementById('refreshDriveBtn');
+            if (button.disabled) return;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            const label = button.querySelector('span');
+            label.textContent = 'Se actualizează...';
+            try {
+                await refreshSharedDrive();
+                showToast('Lista a fost actualizată.');
+            } catch (error) {
+                window.drive.setConnectionStatus('Conexiune indisponibilă. Reîncearcă actualizarea.', true);
+                showToast(error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                label.textContent = 'Actualizează';
+            }
+        }
+
+        async function importLocalFiles() {
+            const button = document.getElementById('importLocalBtn');
+            button.disabled = true;
+            try {
+                const result = await window.drive.importLocal();
+                showToast('Importate: ' + result.imported + '; existente: ' + result.skipped + '; nereușite: ' + result.failed,
+                    result.failed ? 'error' : 'success');
+                await refreshSharedDrive();
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initDB();
+                updateAuthUI();
+                await initializeNavigation();
+                await updateStorageStats();
+            } catch (error) {
+                window.drive?.setConnectionStatus('Conexiune indisponibilă. Reîncearcă mai târziu.', true);
+                showToast(error.message, 'error');
+            }
+        });
+        window.addEventListener('unhandledrejection', event => {
+            event.preventDefault();
+            showToast(event.reason?.message || 'Operația nu a putut fi finalizată.', 'error');
+        });
+
+        function updateAuthUI() {
+            window.tables?.setAuthenticated(sessionState.isAuthenticated);
+            if (!sessionState.isAuthenticated) {
+                document.getElementById('linkReviewPanel').classList.add('hidden');
+                document.getElementById('linkReviewList').replaceChildren();
+                document.getElementById('linkOrderDialog').close();
+                document.getElementById('linkOrderPosition').replaceChildren();
+                orderingLinkId = null;
+                linkOrderGeneration++;
+            }
+            const badge = document.getElementById('authStatusBadge');
+            const text = document.getElementById('authStatusText');
+            const btnText = document.getElementById('authBtnText');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            if (sessionState.isAdmin) {
+                badge.classList.remove('hidden');
+                badge.className = 'hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold';
+                text.innerText = 'Administrator';
+                btnText.innerText = 'Admin Conectat';
+                logoutBtn.classList.remove('hidden');
+            } else if (sessionState.isAuthenticated) {
+                badge.className = 'hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold';
+                text.innerText = 'Utilizator Autentificat';
+                btnText.innerText = 'Cont Conectat';
+                logoutBtn.classList.remove('hidden');
+            } else {
+                badge.classList.remove('hidden');
+                badge.className = 'hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold';
+                text.innerText = 'Utilizator Standard';
+                btnText.innerText = 'Autentificare';
+                logoutBtn.classList.add('hidden');
+            }
+            updatePendingBadge();
+        }
+
+        async function updatePendingBadge() {
+            const items = await getAllItemsFromDB();
+            const pendingCount = items.filter(i => i.status === 'pending').length;
+            const badge = document.getElementById('pendingBadge');
+            if (pendingCount > 0) {
+                badge.innerText = pendingCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function renderUsefulLinks(seq) {
+            const status = document.getElementById('linksStatus');
+            const list = document.getElementById('linksList');
+            await renderLinkProposals(seq);
+            if (seq !== renderSeq) return;
+            document.getElementById('addLinkBtn').classList.toggle('hidden', !sessionState.isAuthenticated);
+            if (!sessionState.isAuthenticated) {
+                closeLinkEditor();
+                list.querySelectorAll('[data-link-admin]').forEach(button => button.remove());
+            }
+            try {
+                const links = await window.drive.links();
+                if (seq !== renderSeq) return;
+                usefulLinks = links;
+                const query = document.getElementById('searchInput').value.trim().toLowerCase();
+                const filtered = links.filter(link => `${link.title} ${link.url}`.toLowerCase().includes(query));
+                filtered.sort((first, second) => first.position - second.position);
+                document.getElementById('itemCount').textContent = `${filtered.length} linkuri`;
+                status.classList.toggle('hidden', filtered.length > 0);
+                status.textContent = links.length
+                    ? 'Niciun link nu corespunde căutării.'
+                    : 'Nu există încă linkuri aprobate. Folosește butonul „Propune un link” pentru a trimite o resursă.';
+                list.replaceChildren();
+                for (const link of filtered) {
+                    const row = document.createElement('li');
+                    row.className = 'flex flex-wrap sm:flex-nowrap items-center gap-3 border border-slate-200 rounded-2xl p-4 hover:border-blue-300 transition';
+                    const number = document.createElement('span');
+                    number.className = 'text-[10px] text-slate-500 tabular-nums shrink-0';
+                    number.textContent = `#${link.position}`;
+                    number.setAttribute('aria-label', `Linkul numărul ${link.position}`);
+                    row.append(number);
+                    const anchor = document.createElement('a');
+                    anchor.href = link.url;
+                    anchor.target = '_blank';
+                    anchor.rel = 'noopener noreferrer';
+                    anchor.className = 'flex items-center gap-3 flex-1 min-w-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500';
+                    anchor.innerHTML = `<span class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-link" aria-hidden="true"></i></span><span class="min-w-0 flex-1"><span class="block font-semibold text-slate-800 break-words">${esc(link.title)}</span><span class="block text-xs text-slate-500 break-all mt-1">${esc(link.url)}</span></span><i class="fa-solid fa-arrow-up-right-from-square text-slate-400 shrink-0" aria-hidden="true"></i>`;
+                    row.append(anchor);
+                    if (sessionState.isAuthenticated) {
+                        for (const action of ['reorder', 'edit', 'delete']) {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.dataset.linkAdmin = action;
+                            button.className = 'px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition';
+                            button.textContent = action === 'reorder' ? 'Reordonează' : action === 'edit' ? 'Editează' : 'Șterge';
+                            button.setAttribute('aria-label', `${button.textContent}: ${link.title}`);
+                            button.addEventListener('click', () => action === 'reorder' ? openLinkOrderDialog(link.id) : action === 'edit' ? openLinkEditor(link.id) : deleteUsefulLink(link, button));
+                            row.append(button);
+                        }
+                    }
+                    list.append(row);
+                }
+            } catch (error) {
+                if (seq !== renderSeq) return;
+                list.replaceChildren();
+                document.getElementById('itemCount').textContent = 'Linkuri indisponibile';
+                status.classList.remove('hidden');
+                status.textContent = 'Linkurile nu pot fi încărcate momentan. Lista se reîncarcă automat.';
+                showToast(error.message, 'error');
+            }
+        }
+
+        function openProposalDialog() {
+            document.getElementById('proposalSuccess').classList.add('hidden');
+            const dialog = document.getElementById('proposalDialog');
+            if (!dialog.open) dialog.showModal();
+            document.getElementById('proposalTitle').focus();
+        }
+
+        function closeProposalDialog() {
+            if (!submittingProposal) document.getElementById('proposalDialog').close();
+        }
+
+        async function openLinkOrderDialog(id) {
+            if (!sessionState.isAuthenticated || savingLinkOrder) return;
+            orderingLinkId = id;
+            const generation = ++linkOrderGeneration;
+            const dialog = document.getElementById('linkOrderDialog');
+            const select = document.getElementById('linkOrderPosition');
+            const button = document.getElementById('saveLinkOrderBtn');
+            const status = document.getElementById('linkOrderStatus');
+            document.getElementById('linkOrderTitle').textContent = '';
+            document.getElementById('linkOrderError').classList.add('hidden');
+            select.replaceChildren();
+            select.disabled = true;
+            button.disabled = true;
+            status.textContent = 'Se încarcă ordinea actuală...';
+            if (!dialog.open) dialog.showModal();
+            try {
+                const links = await window.drive.links();
+                if (generation !== linkOrderGeneration || !sessionState.isAuthenticated || !dialog.open) return;
+                const link = links.find(entry => entry.id === id);
+                if (!link) throw new Error('Linkul nu mai este disponibil.');
+                document.getElementById('linkOrderTitle').textContent = `#${link.position} · ${link.title}`;
+                for (const entry of links) {
+                    const option = document.createElement('option');
+                    option.value = String(entry.position);
+                    option.textContent = `${entry.position} · ${entry.title}`;
+                    select.append(option);
+                }
+                select.value = String(link.position);
+                select.disabled = false;
+                button.disabled = false;
+                status.textContent = `Poziția actuală: ${link.position} din ${links.length}.`;
+                select.focus();
+            } catch (error) {
+                if (generation !== linkOrderGeneration || !dialog.open) return;
+                status.textContent = '';
+                document.getElementById('linkOrderError').textContent = error.message;
+                document.getElementById('linkOrderError').classList.remove('hidden');
+            }
+        }
+
+        function closeLinkOrderDialog() {
+            if (savingLinkOrder) return;
+            document.getElementById('linkOrderDialog').close();
+            orderingLinkId = null;
+            linkOrderGeneration++;
+        }
+
+        async function saveLinkOrder(event) {
+            event.preventDefault();
+            if (!sessionState.isAuthenticated || !orderingLinkId || savingLinkOrder || document.getElementById('saveLinkOrderBtn').disabled) return;
+            savingLinkOrder = true;
+            const errorText = document.getElementById('linkOrderError');
+            const button = document.getElementById('saveLinkOrderBtn');
+            const position = Number(document.getElementById('linkOrderPosition').value);
+            errorText.classList.add('hidden');
+            ['linkOrderPosition', 'saveLinkOrderBtn', 'closeLinkOrderBtn'].forEach(id => document.getElementById(id).disabled = true);
+            button.textContent = 'Se reordonează...';
+            try {
+                await window.drive.reorderLink(orderingLinkId, position);
+                document.getElementById('linkOrderDialog').close();
+                orderingLinkId = null;
+                linkOrderGeneration++;
+                showToast('Ordinea linkurilor a fost actualizată.');
+                await renderCurrentView();
+            } catch (error) {
+                errorText.textContent = error.message;
+                errorText.classList.remove('hidden');
+            } finally {
+                savingLinkOrder = false;
+                ['linkOrderPosition', 'saveLinkOrderBtn', 'closeLinkOrderBtn'].forEach(id => document.getElementById(id).disabled = false);
+                button.textContent = 'Reordonează';
+            }
+        }
+
+        async function submitLinkProposal(event) {
+            event.preventDefault();
+            if (submittingProposal) return;
+            submittingProposal = true;
+            const errorText = document.getElementById('proposalError');
+            const successText = document.getElementById('proposalSuccess');
+            const button = document.getElementById('submitProposalBtn');
+            errorText.classList.add('hidden');
+            successText.classList.add('hidden');
+            ['proposalTitle', 'proposalUrl', 'submitProposalBtn', 'closeProposalBtn'].forEach(id => document.getElementById(id).disabled = true);
+            button.textContent = 'Se trimite...';
+            try {
+                await window.drive.proposeLink({
+                    title: document.getElementById('proposalTitle').value,
+                    url: document.getElementById('proposalUrl').value,
+                });
+                document.getElementById('proposalForm').reset();
+                successText.textContent = 'Propunerea a fost trimisă. Linkul devine public numai după aprobare.';
+                successText.classList.remove('hidden');
+                await renderCurrentView();
+            } catch (error) {
+                errorText.textContent = error.message;
+                errorText.classList.remove('hidden');
+            } finally {
+                submittingProposal = false;
+                ['proposalTitle', 'proposalUrl', 'submitProposalBtn', 'closeProposalBtn'].forEach(id => document.getElementById(id).disabled = false);
+                button.textContent = 'Trimite propunerea';
+            }
+        }
+
+        async function renderLinkProposals(seq) {
+            const panel = document.getElementById('linkReviewPanel');
+            const list = document.getElementById('linkReviewList');
+            const status = document.getElementById('linkReviewStatus');
+            panel.classList.toggle('hidden', !sessionState.isAuthenticated);
+            if (!sessionState.isAuthenticated) {
+                list.replaceChildren();
+                return;
+            }
+            try {
+                const proposals = await window.drive.linkProposals();
+                if (seq !== renderSeq || !sessionState.isAuthenticated) return;
+                list.replaceChildren();
+                status.classList.toggle('hidden', proposals.length > 0);
+                status.textContent = 'Nu există propuneri în așteptare.';
+                for (const proposal of proposals) {
+                    const row = document.createElement('li');
+                    row.className = 'flex flex-wrap items-center gap-3 border border-amber-200 bg-amber-50 rounded-2xl p-4';
+                    row.innerHTML = `<div class="flex-1 min-w-0"><span class="block font-semibold text-slate-800 break-words">${esc(proposal.title)}</span><a href="${esc(proposal.url)}" target="_blank" rel="noopener noreferrer" class="block text-xs text-blue-700 break-all mt-1 hover:underline">${esc(proposal.url)}</a><span class="block text-xs text-amber-800 mt-2">În așteptare · ${esc(new Date(proposal.createdAt).toLocaleString('ro-RO'))}</span></div>`;
+                    for (const decision of ['approved', 'rejected']) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 disabled:opacity-50';
+                        button.textContent = decision === 'approved' ? 'Aprobă' : 'Respinge';
+                        button.setAttribute('aria-label', `${button.textContent}: ${proposal.title}`);
+                        button.addEventListener('click', () => reviewLinkProposal(proposal.id, decision, row));
+                        row.append(button);
+                    }
+                    list.append(row);
+                }
+            } catch (error) {
+                if (seq !== renderSeq) return;
+                list.replaceChildren();
+                status.classList.remove('hidden');
+                status.textContent = 'Propunerile nu pot fi încărcate momentan. Lista se reîncarcă automat.';
+            }
+        }
+
+        async function reviewLinkProposal(id, decision, row) {
+            if (!sessionState.isAuthenticated || row.dataset.reviewing) return;
+            row.dataset.reviewing = 'true';
+            row.querySelectorAll('button').forEach(button => button.disabled = true);
+            try {
+                await window.drive.reviewLink(id, decision);
+                showToast(decision === 'approved' ? 'Linkul a fost aprobat și publicat.' : 'Propunerea a fost respinsă.');
+                await renderCurrentView();
+            } catch (error) {
+                showToast(error.message, 'error');
+                if (error.status === 409) await renderCurrentView();
+            } finally {
+                delete row.dataset.reviewing;
+                row.querySelectorAll('button').forEach(button => button.disabled = false);
+            }
+        }
+
+        function openLinkEditor(id = null) {
+            if (!sessionState.isAuthenticated || savingLink) return;
+            const link = id ? usefulLinks.find(entry => entry.id === id) : null;
+            if (id && !link) return;
+            editingLinkId = id;
+            document.getElementById('linkFormHeading').textContent = id ? 'Editează linkul' : 'Adaugă link';
+            document.getElementById('linkTitle').value = link?.title || '';
+            document.getElementById('linkUrl').value = link?.url || '';
+            document.getElementById('linkFormError').classList.add('hidden');
+            document.getElementById('linkForm').classList.remove('hidden');
+            document.getElementById('linkTitle').focus();
+        }
+
+        function closeLinkEditor() {
+            document.getElementById('linkForm').classList.add('hidden');
+            editingLinkId = null;
+        }
+
+        async function saveUsefulLink(event) {
+            event.preventDefault();
+            if (!sessionState.isAuthenticated || savingLink) return;
+            const button = document.getElementById('saveLinkBtn');
+            const errorText = document.getElementById('linkFormError');
+            savingLink = true;
+            button.disabled = true;
+            ['linkTitle', 'linkUrl', 'cancelLinkBtn'].forEach(id => document.getElementById(id).disabled = true);
+            button.textContent = 'Se salvează...';
+            errorText.classList.add('hidden');
+            try {
+                await window.drive.saveLink(editingLinkId, {
+                    title: document.getElementById('linkTitle').value,
+                    url: document.getElementById('linkUrl').value,
+                });
+                closeLinkEditor();
+                showToast('Linkul a fost salvat.');
+                await renderCurrentView();
+            } catch (error) {
+                errorText.textContent = error.message;
+                errorText.classList.remove('hidden');
+            } finally {
+                savingLink = false;
+                button.disabled = false;
+                ['linkTitle', 'linkUrl', 'cancelLinkBtn'].forEach(id => document.getElementById(id).disabled = false);
+                button.textContent = 'Salvează';
+            }
+        }
+
+        async function deleteUsefulLink(link, button) {
+            if (!sessionState.isAuthenticated || button.disabled || !confirm(`Ștergi linkul „${link.title}”?`)) return;
+            button.disabled = true;
+            try {
+                await window.drive.removeLink(link.id);
+                if (editingLinkId === link.id) closeLinkEditor();
+                showToast('Linkul a fost șters.');
+                await renderCurrentView();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function renderCurrentView() {
+            const seq = ++renderSeq;
+            const linksView = currentView === 'links';
+            const tablesView = currentView === 'tables';
+            document.getElementById('tablesPanel').classList.toggle('hidden', !tablesView);
+            document.getElementById('nav-tables').className = tablesView
+                ? 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition'
+                : 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition';
+            document.getElementById('nav-tables').setAttribute('aria-current', tablesView ? 'page' : 'false');
+            document.getElementById('sortBy').classList.toggle('hidden', linksView || tablesView);
+            document.getElementById('searchInput').placeholder = linksView ? 'Caută după titlul sau adresa linkului...' : 'Caută fișiere, foldere, audio, video...';
+            if (tablesView) document.getElementById('searchInput').placeholder = 'Caută un tabel după titlu...';
+            document.getElementById('fileToolbar').classList.toggle('hidden', linksView || tablesView);
+            document.getElementById('linksPanel').classList.toggle('hidden', !linksView);
+            document.getElementById('itemsGrid').classList.toggle('hidden', linksView || tablesView);
+            document.getElementById('nav-links').className = linksView
+                ? 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition'
+                : 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition';
+            document.getElementById('nav-links').setAttribute('aria-current', linksView ? 'page' : 'false');
+            if (tablesView) {
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('pendingBulkBar').classList.add('hidden');
+                document.getElementById('normalBulkBar').classList.add('hidden');
+                closeLinkEditor();
+                await window.tables.show(sessionState.isAuthenticated, document.getElementById('searchInput').value);
+                return;
+            }
+            if (linksView) {
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('pendingBulkBar').classList.add('hidden');
+                document.getElementById('normalBulkBar').classList.add('hidden');
+                await renderUsefulLinks(seq);
+                return;
+            }
+            closeLinkEditor();
+            const itemsGrid = document.getElementById('itemsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const sortBy = document.getElementById('sortBy').value;
+
+            let items = await getAllItemsFromDB();
+            if (seq !== renderSeq) return; // a newer render started; avoid duplicated cards
+            const folderName = new Map(items.filter(i => i.isFolder).map(f => [f.id, f.name]));
+
+            const adminBtn = document.getElementById('adminFolderBtn');
+            adminBtn.classList.toggle('hidden', !sessionState.isAdmin);
+            adminBtn.classList.toggle('flex', sessionState.isAdmin);
+            const delBtn = document.getElementById('bulkDeleteBtn');
+            delBtn.classList.toggle('hidden', !sessionState.isAdmin);
+            delBtn.classList.toggle('flex', sessionState.isAdmin);
+            const pendingBulkBar = document.getElementById('pendingBulkBar');
+            const normalBulkBar = document.getElementById('normalBulkBar');
+            pendingBulkBar.classList.toggle('hidden', currentView !== 'pending');
+            pendingBulkBar.classList.toggle('flex', currentView === 'pending');
+            normalBulkBar.classList.toggle('hidden', currentView !== 'all');
+            normalBulkBar.classList.toggle('flex', currentView === 'all');
+
+            if (currentView === 'pending') {
+                items = items.filter(i => i.status === 'pending');
+            } else if (currentFilter !== 'all') {
+                items = items.filter(i => i.status === 'approved' && !i.isFolder && fileCategory(i) === currentFilter);
+            } else {
+                items = items.filter(i => i.status === 'approved' && (i.parentId === currentFolderId || (currentFolderId === 'root' && !i.parentId)));
+            }
+            if (searchQuery) items = items.filter(i => i.name.toLowerCase().includes(searchQuery));
+
+            items.sort((a, b) => {
+                if (a.isFolder && !b.isFolder) return -1;
+                if (!a.isFolder && b.isFolder) return 1;
+                if (sortBy === 'date') return (b.createdAt || 0) - (a.createdAt || 0);
+                return a.name.localeCompare(b.name, 'ro', { numeric: true });
+            });
+
+            selectedPendingIds.forEach(id => { if (!items.some(i => i.id === id)) selectedPendingIds.delete(id); });
+            selectedNormalIds.forEach(id => { if (!items.some(i => i.id === id)) selectedNormalIds.delete(id); });
+            viewFiles = items.filter(i => !i.isFolder);
+
+            thumbUrls.forEach(u => URL.revokeObjectURL(u));
+            thumbUrls = [];
+            itemsGrid.innerHTML = '';
+            document.getElementById('itemCount').innerText = `${items.length} elemente`;
+            updatePendingSelectionUI();
+            updateNormalSelectionUI();
+            emptyState.classList.toggle('hidden', items.length > 0);
+
+            const iconBox = (bg, icon) => `<div class="w-16 h-16 ${bg} rounded-2xl flex items-center justify-center text-3xl mb-3 group-hover:scale-105 transition-transform"><i class="fa-solid ${icon}"></i></div>`;
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-between hover:shadow-lg transition-all group relative cursor-pointer";
+                const cb = 'bg-white/90 rounded-md p-0.5 shadow-sm';
+                let badgeHtml = '', iconHtml = '';
+
+                if (item.status === 'pending') {
+                    badgeHtml = `<div class="absolute top-3 left-3 flex items-center gap-2 z-10">
+                        <span class="${cb}"><input type="checkbox" data-pending-select="${item.id}" ${selectedPendingIds.has(item.id) ? 'checked' : ''} onclick="togglePendingSelection('${item.id}', event)" class="w-4 h-4 rounded"></span>
+                        <span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">În așteptare</span></div>`;
+                } else if (!item.isFolder && currentView === 'all') {
+                    badgeHtml = `<div class="absolute top-3 left-3 z-10 ${cb}"><input type="checkbox" data-normal-select="${item.id}" ${selectedNormalIds.has(item.id) ? 'checked' : ''} onclick="toggleNormalSelection('${item.id}', event)" class="w-4 h-4 rounded" title="Selectează pentru descărcare"></div>`;
+                }
+
+                const go = fn => card.onclick = e => { if (!e.target.closest('button, .context-menu-container, input')) fn(); };
+                if (item.isFolder) {
+                    iconHtml = iconBox('bg-blue-50 text-blue-600', 'fa-folder');
+                    go(() => { if (item.status !== 'pending') navigateTo(item.id); });
+                } else {
+                    const cat = fileCategory(item);
+                    if (cat === 'image' && item.size <= 3 * 1024 * 1024) {
+                        const u = '';
+                        iconHtml = `<div class="w-full h-28 mb-3 rounded-xl overflow-hidden bg-slate-100"><img data-drive-thumbnail="${item.id}" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform"></div>`;
+                    } else if (cat === 'image') iconHtml = iconBox('bg-emerald-50 text-emerald-600', 'fa-image');
+                    else if (cat === 'audio') iconHtml = iconBox('bg-purple-50 text-purple-600', 'fa-music');
+                    else if (cat === 'video') iconHtml = iconBox('bg-red-50 text-red-600', 'fa-video');
+                    else if (cat === 'document') iconHtml = iconBox('bg-amber-50 text-amber-600', /pdf/i.test((item.type || '') + item.name) ? 'fa-file-pdf' : 'fa-file-lines');
+                    else iconHtml = iconBox('bg-slate-100 text-slate-600', 'fa-file');
+                    go(() => previewItem(item.id));
+                }
+
+                const mb = (fn, cls, icon, label) => `<button ${fn === 'downloadItem' ? 'data-download-button' : ''} onclick="${fn}('${item.id}', event)" class="w-full text-left px-4 py-2 flex items-center space-x-2 ${cls}"><i class="fa-solid ${icon} w-4"></i><span>${label}</span></button>`;
+                const menuHtml = `
+                    <div class="absolute top-3 right-3 context-menu-container z-10">
+                        <button onclick="toggleContextMenu('${item.id}', event)" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl flex items-center justify-center transition"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
+                        <div id="menu_${item.id}" class="hidden absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-40 py-1 text-xs text-slate-700">
+                            ${item.status === 'pending'
+                                ? mb('previewItem', 'hover:bg-slate-100', 'fa-eye', 'Vizualizează') + mb('approveItem', 'hover:bg-emerald-50 text-emerald-600 font-semibold', 'fa-check', 'Aprobă') + mb('rejectItem', 'hover:bg-red-50 text-red-600 font-semibold', 'fa-xmark', 'Respinge')
+                                : mb('downloadItem', 'hover:bg-blue-50 text-blue-600', 'fa-download', item.isFolder ? 'Descarcă ZIP' : 'Descarcă')
+                                  + (sessionState.isAdmin ? mb('moveItemPrompt', 'hover:bg-slate-100', 'fa-arrow-right-arrow-left', 'Mută')
+                                  + mb('renameItemPrompt', 'hover:bg-slate-100', 'fa-pen', 'Redenumește')
+                                  + mb('deleteItem', 'hover:bg-red-50 text-red-600', 'fa-trash', 'Șterge') : '')}
+                        </div>
+                    </div>`;
+
+                card.innerHTML = `${badgeHtml}${menuHtml}${iconHtml}
+                    <div class="text-center w-full px-1">
+                        <h4 class="font-semibold text-slate-800 text-sm truncate" title="${esc(item.name)}">${esc(item.name)}</h4>
+                        <span class="text-[11px] text-slate-400">${item.isFolder ? 'Folder' : formatBytes(item.size)}${item.status === 'pending' && !item.isFolder ? ' · ' + esc(folderName.get(item.parentId) || '') : ''}</span>
+                    </div>`;
+                itemsGrid.appendChild(card);
+            });
+            window.drive.loadThumbnails(items);
+        }
+
+        // Context Menu toggling
+        function toggleContextMenu(id, event) {
+            event.stopPropagation();
+            closeAllContextMenus();
+            const menu = document.getElementById(`menu_${id}`);
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+        }
+
+        function closeAllContextMenus(event) {
+            document.querySelectorAll('[id^="menu_"]').forEach(m => m.classList.add('hidden'));
+        }
+
+        function writeRoute(folderId, documentId = null, replace = false, previewEntry = false) {
+            const url = new URL(location.href);
+            if (folderId === 'root') url.searchParams.delete('folder');
+            else url.searchParams.set('folder', folderId);
+            if (documentId) url.searchParams.set('document', documentId);
+            else url.searchParams.delete('document');
+            const state = { ...history.state, driveFolder: folderId, drivePreview: previewEntry };
+            history[replace ? 'replaceState' : 'pushState'](state, '', url);
+        }
+
+        async function initializeNavigation() {
+            const route = new URL(location.href);
+            const folderId = route.searchParams.get('folder') || 'root';
+            const documentId = route.searchParams.get('document');
+            const all = await getAllItemsFromDB();
+            const path = [];
+            const visited = new Set();
+            let folder = all.find(item => item.id === folderId && item.isFolder);
+            while (folder && !visited.has(folder.id)) {
+                visited.add(folder.id);
+                path.unshift(folder.id);
+                folder = all.find(item => item.id === folder.parentId && item.isFolder);
+            }
+            writeRoute('root', null, true);
+            for (const id of path) writeRoute(id);
+            await navigateTo(path.at(-1) || 'root', false);
+            if (folderId !== 'root' && !path.length) showToast('Folderul nu mai este disponibil.', 'error');
+            if (documentId) await previewItem(documentId);
+        }
+
+        window.addEventListener('popstate', async () => {
+            try {
+                navigationGeneration++;
+                closePreviewModal(false);
+                const route = new URL(location.href);
+                const folderId = route.searchParams.get('folder') || 'root';
+                if (folderId !== currentFolderId) await navigateTo(folderId, false);
+                if (route.href !== location.href) return;
+                const documentId = route.searchParams.get('document');
+                if (documentId) await previewItem(documentId, false);
+            } catch (error) { showToast(error.message, 'error'); }
+        });
+
+        async function navigateToParent() {
+            if (currentFolderId === 'root') return;
+            const folder = await getItemFromDB(currentFolderId);
+            await navigateTo(folder?.parentId || 'root');
+        }
+
+        async function navigateTo(folderId, push = true) {
+            const generation = ++navigationGeneration;
+            closePreviewModal(false);
+            if (folderId !== 'root') {
+                const folder = await getItemFromDB(folderId);
+                if (generation !== navigationGeneration) return;
+                if (!folder?.isFolder) {
+                    folderId = 'root';
+                    writeRoute(folderId, null, true);
+                    showToast('Folderul nu mai este disponibil.', 'error');
+                }
+            }
+            if (push && (folderId !== currentFolderId || new URL(location.href).searchParams.has('document'))) writeRoute(folderId);
+            currentFolderId = folderId;
+            currentView = 'all';
+            currentFilter = 'all';
+            document.getElementById('nav-all').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition";
+            document.getElementById('nav-pending').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition relative";
+            
+            await updateBreadcrumbs();
+            if (generation !== navigationGeneration) return;
+            await renderCurrentView();
+        }
+
+        async function updateBreadcrumbs() {
+            document.getElementById('folderBackBtn').disabled = currentFolderId === 'root';
+            const breadcrumbs = document.getElementById('breadcrumbs');
+            breadcrumbs.innerHTML = `
+                <button onclick="navigateTo('root')" class="text-blue-600 font-semibold hover:underline flex items-center space-x-1">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Root</span>
+                </button>
+            `;
+
+            if (currentFolderId === 'root') return;
+
+            const path = [];
+            let currId = currentFolderId;
+            while (currId && currId !== 'root') {
+                const folder = await getItemFromDB(currId);
+                if (folder) {
+                    path.unshift(folder);
+                    currId = folder.parentId;
+                } else {
+                    break;
+                }
+            }
+
+            path.forEach(folder => {
+                breadcrumbs.innerHTML += `
+                    <span class="text-slate-400">/</span>
+                    <button onclick="navigateTo('${folder.id}')" class="text-slate-700 font-semibold hover:underline truncate max-w-[120px]">${esc(folder.name)}</button>
+                `;
+            });
+        }
+
+        function switchView(view) {
+            if (view === 'pending') {
+                if (!sessionState.isAdmin) {
+                    showToast('Acces permis doar administratorilor. Autentificați-vă.', 'error');
+                    openAuthModal();
+                    return;
+                }
+            }
+            currentView = view;
+            if (view !== 'pending') selectedPendingIds.clear();
+            if (view === 'all') {
+                document.getElementById('nav-all').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition";
+                document.getElementById('nav-pending').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition relative";
+                navigateTo('root');
+            } else {
+                document.getElementById('nav-pending').className = view === 'pending'
+                    ? "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition relative"
+                    : "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition relative";
+                document.getElementById('nav-all').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition";
+                renderCurrentView();
+            }
+            if (window.innerWidth < 1024) toggleSidebar();
+        }
+
+        function filterByType(type) {
+            currentFilter = type;
+            currentView = 'all';
+            selectedPendingIds.clear();
+            document.getElementById('nav-all').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-600 bg-blue-50 transition";
+            document.getElementById('nav-pending').className = "w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition relative";
+            renderCurrentView();
+            if (window.innerWidth < 1024 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) toggleSidebar();
+        }
+
+        // --- UPLOAD (destination folder is mandatory) ---
+        async function openUploadModal() {
+            if (uploadController) { document.getElementById('uploadModal').classList.remove('hidden'); return; }
+            pendingUploadFiles = [];
+            document.getElementById('uploadProgressPanel').classList.add('hidden');
+            document.getElementById('uploadConfirmBtn').textContent = 'Încarcă';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('folderInput').value = '';
+            const items = await getAllItemsFromDB();
+            const byId = new Map(items.map(i => [i.id, i]));
+            const pathOf = f => { const p = []; let c = f, g = 0; while (c && g++ < 30) { p.unshift(c.name); c = byId.get(c.parentId); } return p.join(' / '); };
+            const folders = items.filter(i => i.isFolder && i.status === 'approved')
+                .map(f => ({ id: f.id, label: pathOf(f) })).sort((a, b) => a.label.localeCompare(b.label, 'ro'));
+            const sel = document.getElementById('uploadFolderSelect');
+            sel.innerHTML = '<option value="" disabled selected>— Alege folderul —</option>' +
+                folders.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
+            sel.disabled = folders.length === 0;
+            document.getElementById('uploadNoFolders').classList.toggle('hidden', folders.length > 0);
+            refreshUploadModal();
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
+        function closeUploadModal() { if (uploadController) pauseUpload(); document.getElementById('uploadModal').classList.add('hidden'); }
+        function pauseUpload() { uploadController?.abort(); }
+        function onUploadFilesChosen(e) { document.getElementById('folderInput').value = ''; pendingUploadFiles = Array.from(e.target.files || []); refreshUploadModal(); }
+        function onUploadFolderChosen(e) { document.getElementById('fileInput').value = ''; pendingUploadFiles = Array.from(e.target.files || []); refreshUploadModal(); }
+        function refreshUploadModal() {
+            document.getElementById('uploadSummary').textContent = pendingUploadFiles.length ? `${pendingUploadFiles.length} fișiere · ${formatBytes(pendingUploadFiles.reduce((total, file) => total + file.size, 0))} în total` : '';
+            document.getElementById('uploadFileList').innerHTML = pendingUploadFiles
+                .map(f => `<li class="flex justify-between gap-2 bg-slate-50 rounded-lg px-2 py-1"><span class="truncate">${esc(f.webkitRelativePath || f.name)}</span><span class="text-slate-400 shrink-0">${formatBytes(f.size)}</span></li>`).join('');
+            document.getElementById('uploadConfirmBtn').disabled = !!uploadController || !(pendingUploadFiles.length && document.getElementById('uploadFolderSelect').value);
+        }
+        async function confirmUpload() {
+            if (uploadController) return;
+            const folderId = document.getElementById('uploadFolderSelect').value;
+            if (!folderId) { showToast('Alege folderul de destinație.', 'error'); return; }
+            if (!pendingUploadFiles.length) { showToast('Alege cel puțin un fișier.', 'error'); return; }
+            if (pendingUploadFiles.some(file => file.size > window.drive.maxFileSize)) { showToast('Limita este de 5 GB per fișier.', 'error'); return; }
+            let folder;
+            const btn = document.getElementById('uploadConfirmBtn');
+            const files = [...pendingUploadFiles];
+            const totalBytes = files.reduce((total, file) => total + file.size, 0);
+            let completedBytes = 0;
+            let completedFiles = 0;
+            uploadController = new AbortController();
+            const signal = uploadController.signal;
+            ['fileInput', 'folderInput', 'uploadFolderSelect'].forEach(id => document.getElementById(id).disabled = true);
+            document.getElementById('uploadPauseBtn').classList.remove('hidden');
+            document.getElementById('uploadProgressPanel').classList.remove('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Se încarcă…';
+            try {
+                folder = await getItemFromDB(folderId);
+                if (!folder || !folder.isFolder) throw new Error('Folderul ales nu mai există. Alege altă destinație.');
+                const folderMap = new Map();
+                for (const file of files) {
+                    signal.throwIfAborted();
+                    const onProgress = progress => {
+                        const percent = Math.round(progress.bytes / Math.max(1, progress.total) * 100);
+                        document.getElementById('uploadProgressText').textContent = `${progress.phase === 'verify' ? 'Verificare pentru reluare' : 'Încărcare'} · ${file.name} · ${percent}%`;
+                        const uploadedBytes = completedBytes + (progress.phase === 'upload' ? progress.bytes : 0);
+                        document.getElementById('uploadProgress').value = totalBytes ? uploadedBytes / totalBytes * 100 : completedFiles / files.length * 100;
+                        document.getElementById('uploadProgressDetail').textContent = `${completedFiles} / ${files.length} fișiere · ${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}`;
+                    };
+                    onProgress({ phase: 'verify', bytes: 0, total: file.size });
+                    const parts = (file.webkitRelativePath || '').split('/').filter(Boolean);
+                    parts.pop(); // file name
+                    let parent = folderId, pathSoFar = '';
+                    for (const part of parts) {
+                        pathSoFar += '/' + part;
+                        if (!folderMap.has(pathSoFar)) {
+                            const fid = 'folder_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                            const directory = { id: fid, name: part, parentId: parent, isFolder: true, createdAt: Date.now(), status: 'pending' };
+                            await saveItemToDB(directory, { resumable: true, signal });
+                            folderMap.set(pathSoFar, directory.id);
+                        }
+                        parent = folderMap.get(pathSoFar);
+                    }
+                    await saveItemToDB({
+                        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                        name: file.name, size: file.size, type: file.type, blob: file,
+                        parentId: parent, isFolder: false, status: 'pending', createdAt: Date.now()
+                    }, { resumable: true, signal, onProgress });
+                    completedBytes += file.size;
+                    completedFiles++;
+                    document.getElementById('uploadProgress').value = totalBytes ? completedBytes / totalBytes * 100 : completedFiles / files.length * 100;
+                    document.getElementById('uploadProgressDetail').textContent = `${completedFiles} / ${files.length} fișiere · ${formatBytes(completedBytes)} / ${formatBytes(totalBytes)}`;
+                }
+            } catch (err) {
+                const paused = signal.aborted;
+                const message = paused ? 'Încărcare în pauză. Apasă „Reia încărcarea” pentru a continua.' : `${err.message || 'Încărcarea a eșuat.'} Fragmentele salvate sunt păstrate. Poți relua încărcarea.`;
+                document.getElementById('uploadProgressText').textContent = message;
+                btn.textContent = 'Reia încărcarea';
+                showToast(message, paused ? 'info' : 'error');
+                return;
+            } finally {
+                uploadController = null;
+                ['fileInput', 'folderInput', 'uploadFolderSelect'].forEach(id => document.getElementById(id).disabled = false);
+                document.getElementById('uploadPauseBtn').classList.add('hidden');
+                btn.disabled = false;
+                window.drive.setConnectionStatus('Conectat · stocare comună online');
+            }
+            const n = pendingUploadFiles.length;
+            pendingUploadFiles = [];
+            closeUploadModal();
+            showToast(`${n} fișier${n === 1 ? '' : 'e'} încărcat${n === 1 ? '' : 'e'} în „${folder.name}”. Așteaptă aprobarea administratorului.`);
+            renderCurrentView();
+            updatePendingBadge();
+        }
+
+        // Selection Management for Normal Files
+        function toggleNormalSelection(id, event) {
+            event.stopPropagation();
+            if (selectedNormalIds.has(id)) selectedNormalIds.delete(id); else selectedNormalIds.add(id);
+            updateNormalSelectionUI();
+            document.querySelectorAll('[data-normal-select]').forEach(cb => { cb.checked = selectedNormalIds.has(cb.dataset.normalSelect); });
+        }
+        function toggleSelectAllNormal(checked) {
+            viewFiles.forEach(i => checked ? selectedNormalIds.add(i.id) : selectedNormalIds.delete(i.id));
+            document.querySelectorAll('[data-normal-select]').forEach(cb => { cb.checked = selectedNormalIds.has(cb.dataset.normalSelect); });
+            updateNormalSelectionUI();
+        }
+        function updateNormalSelectionUI() {
+            const count = selectedNormalIds.size;
+            document.getElementById('selectedNormalCount').innerText = `(${count} selectate)`;
+            const all = document.getElementById('selectAllNormal');
+            all.checked = viewFiles.length > 0 && viewFiles.every(i => selectedNormalIds.has(i.id));
+            all.indeterminate = count > 0 && !all.checked;
+        }
+        function deleteSelectedFiles() {
+            requireAdmin(async () => {
+                const ids = Array.from(selectedNormalIds);
+                if (!ids.length) { showToast('Nu ai selectat niciun fișier.', 'error'); return; }
+                if (!confirm(`Ștergi definitiv ${ids.length} fișier${ids.length === 1 ? '' : 'e'}?`)) return;
+                for (const id of ids) await deleteItemFromDB(id);
+                selectedNormalIds.clear();
+                showToast(`${ids.length} fișier${ids.length === 1 ? '' : 'e'} șters${ids.length === 1 ? '' : 'e'}!`);
+                await renderCurrentView();
+                updatePendingBadge();
+            });
+        }
+        async function downloadSelectedFiles() {
+            if (!selectedNormalIds.size) { showToast('Nu ai selectat niciun fișier.', 'error'); return; }
+            return window.downloadFeedback.run(performSelectedDownload);
+        }
+        async function performSelectedDownload() {
+            if (selectedNormalIds.size === 1) {
+                const selected = viewFiles.find(item => selectedNormalIds.has(item.id) && !item.isFolder);
+                if (selected) { await downloadFile(selected); return; }
+            }
+            const all = await getAllItemsFromDB();
+            const items = all.filter(i => selectedNormalIds.has(i.id) && !i.isFolder);
+            if (!items.length) return;
+            if (items.length === 1 || items.reduce((total, item) => total + item.size, 0) > window.drive.maxBufferedSize) {
+                showToast('Fișierele mari se descarcă separat, fără arhivă ZIP. Păstrează pagina deschisă.');
+                for (const item of items) { if (!(await downloadFile(item))) break; }
+                return;
+            }
+            showToast(`Se pregătește arhiva cu ${items.length} fișiere...`);
+            try {
+                for (const item of items) await window.drive.loadBlob(item);
+                const zip = new JSZip(), used = new Set();
+                items.forEach(i => {
+                    let n = i.name, k = 1;
+                    const d = i.name.lastIndexOf('.');
+                    while (used.has(n)) { n = d > 0 ? `${i.name.slice(0, d)} (${k})${i.name.slice(d)}` : `${i.name} (${k})`; k++; }
+                    used.add(n);
+                    zip.file(n, i.blob);
+                });
+                saveBlob(await zip.generateAsync({ type: 'blob', compression: 'STORE' }), 'fisiere-selectate.zip');
+                showToast('Arhiva ZIP a fost descărcată!');
+            } catch (err) {
+                showToast(err.message || 'Arhiva nu a putut fi descărcată.', 'error');
+            } finally {
+                items.forEach(item => delete item.blob);
+            }
+        }
+        async function downloadFile(item) {
+            try {
+                if ((await window.drive.download(item)) === false) return false;
+                showToast('Transferul către browser s-a încheiat. Verifică descărcările.');
+                return true;
+            } catch (error) {
+                showToast(error.message || 'Descărcarea a eșuat.', 'error');
+                return false;
+            }
+        }
+
+        async function downloadItem(id, event) {
+            event.stopPropagation();
+            closeAllContextMenus();
+            return window.downloadFeedback.run(async () => {
+                try {
+                    const item = await getItemFromDB(id);
+                    if (!item) { showToast('Elementul nu mai este disponibil.', 'error'); return false; }
+                    if (item.isFolder) showToast('Se pregătește arhiva ZIP cu fișierele și subfolderele. Păstrează pagina deschisă.');
+                    return await downloadFile(item);
+                } catch (error) {
+                    showToast(error.message || 'Descărcarea a eșuat.', 'error');
+                    return false;
+                }
+            });
+        }
+
+        // Selection Management for Pending Items
+        function togglePendingSelection(id, event) {
+            event.stopPropagation();
+            if (selectedPendingIds.has(id)) selectedPendingIds.delete(id);
+            else selectedPendingIds.add(id);
+            updatePendingSelectionUI();
+            document.querySelectorAll('[data-pending-select]').forEach(cb => {
+                cb.checked = selectedPendingIds.has(cb.dataset.pendingSelect);
+            });
+        }
+
+        async function toggleSelectAllPending(checked) {
+            const items = await getAllItemsFromDB();
+            if (checked) items.filter(i => i.status === 'pending').forEach(i => selectedPendingIds.add(i.id));
+            else selectedPendingIds.clear();
+            await renderCurrentView();
+        }
+
+        async function updatePendingSelectionUI() {
+            const count = selectedPendingIds.size;
+            const countEl = document.getElementById('selectedPendingCount');
+            if (countEl) countEl.innerText = `(${count} selectate)`;
+
+            const allCheckbox = document.getElementById('selectAllPending');
+            if (allCheckbox) {
+                const items = await getAllItemsFromDB();
+                const pendingCount = items.filter(i => i.status === 'pending').length;
+                allCheckbox.checked = pendingCount > 0 && count === pendingCount;
+                allCheckbox.indeterminate = count > 0 && count < pendingCount;
+            }
+        }
+
+        // Admin check wrapper for modifications
+        function requireAdmin(action) {
+            if (sessionState.isAdmin) {
+                action();
+            } else {
+                showToast('Această acțiune necesită autentificare ca administrator.', 'error');
+                openAuthModal();
+            }
+        }
+
+        function openCreateFolderModal() {
+            requireAdmin(() => {
+                document.getElementById('newFolderNameInput').value = '';
+                document.getElementById('createFolderModal').classList.remove('hidden');
+            });
+        }
+        function closeCreateFolderModal() {
+            document.getElementById('createFolderModal').classList.add('hidden');
+        }
+
+        async function executeCreateFolder() {
+            const name = document.getElementById('newFolderNameInput').value.trim();
+            if (!name) return;
+
+            const folderId = 'folder_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+            await saveItemToDB({
+                id: folderId,
+                name: name,
+                parentId: currentFolderId,
+                isFolder: true,
+                createdAt: Date.now(),
+                status: 'approved'
+            });
+            closeCreateFolderModal();
+            showToast('Folder creat cu succes!');
+            renderCurrentView();
+        }
+
+        // Rename functions
+        function renameItemPrompt(id, event) {
+            event.stopPropagation();
+            requireAdmin(async () => {
+                const item = await getItemFromDB(id);
+                if (!item) return;
+                itemToRenameId = id;
+                document.getElementById('renameInput').value = item.name;
+                document.getElementById('renameModal').classList.remove('hidden');
+            });
+        }
+        function closeRenameModal() {
+            document.getElementById('renameModal').classList.add('hidden');
+            itemToRenameId = null;
+        }
+        async function executeRenameItem() {
+            if (!itemToRenameId) return;
+            const newName = document.getElementById('renameInput').value.trim();
+            if (!newName) return;
+            try {
+                const item = await getItemFromDB(itemToRenameId);
+                if (!item) throw new Error('Elementul nu mai este disponibil.');
+                item.name = newName;
+                await saveItemToDB(item);
+                showToast('Redenumit cu succes!');
+                closeRenameModal();
+                await updateBreadcrumbs();
+                await renderCurrentView();
+            } catch (error) {
+                showToast(error.message || 'Redenumirea a eșuat.', 'error');
+            }
+        }
+
+        async function deleteItem(id, event) {
+            event.stopPropagation();
+            requireAdmin(async () => {
+                await deleteItemFromDB(id);
+                showToast('Șters cu succes!');
+                renderCurrentView();
+                updatePendingBadge();
+            });
+        }
+
+        async function approveAncestors(item) {
+            let pid = item.parentId, g = 0;
+            while (pid && pid !== 'root' && g++ < 30) {
+                const f = await getItemFromDB(pid);
+                if (!f) break;
+                if (f.status === 'pending') { f.status = 'approved'; await saveItemToDB(f); }
+                pid = f.parentId;
+            }
+        }
+
+        async function approveItem(id, event) {
+            event.stopPropagation();
+            requireAdmin(async () => {
+                const item = await getItemFromDB(id);
+                if (item) {
+                    item.status = 'approved';
+                    selectedPendingIds.delete(id);
+                    await saveItemToDB(item);
+                    await approveAncestors(item);
+                    showToast('Element aprobat!');
+                    renderCurrentView();
+                    updatePendingBadge();
+                }
+            });
+        }
+
+        async function executeBulkApprove(ids) {
+            const items = await getAllItemsFromDB();
+            let processed = 0;
+            for (const id of ids) {
+                const item = items.find(i => i.id === id);
+                if (item && item.status === 'pending') {
+                    item.status = 'approved';
+                    await saveItemToDB(item);
+                    await approveAncestors(item);
+                    processed++;
+                }
+            }
+            selectedPendingIds.clear();
+            showToast(`${processed} element${processed === 1 ? '' : 'e'} aprobat${processed === 1 ? '' : 'e'}!`);
+            await renderCurrentView();
+            await updatePendingBadge();
+        }
+
+        async function executeBulkReject(ids) {
+            let processed = 0;
+            for (const id of ids) {
+                const item = await getItemFromDB(id);
+                if (item && item.status === 'pending') {
+                    await deleteItemFromDB(id);
+                    processed++;
+                }
+            }
+            selectedPendingIds.clear();
+            showToast(`${processed} element${processed === 1 ? '' : 'e'} respins${processed === 1 ? '' : 'e'} și eliminat${processed === 1 ? '' : 'e'}!`);
+            await renderCurrentView();
+            await updatePendingBadge();
+        }
+
+        async function approveSelectedPending() {
+            requireAdmin(async () => {
+                const ids = Array.from(selectedPendingIds);
+                if (!ids.length) {
+                    showToast('Selectează cel puțin un element.', 'error');
+                    return;
+                }
+                await executeBulkApprove(ids);
+            });
+        }
+
+        async function rejectSelectedPending() {
+            requireAdmin(async () => {
+                const ids = Array.from(selectedPendingIds);
+                if (!ids.length) {
+                    showToast('Selectează cel puțin un element.', 'error');
+                    return;
+                }
+                await executeBulkReject(ids);
+            });
+        }
+
+        async function rejectItem(id, event) {
+            event.stopPropagation();
+            requireAdmin(async () => {
+                await executeBulkReject([id]);
+            });
+        }
+
+        // --- GALLERY VIEWER (images, documents, audio, video) ---
+        function addAudioSeekControls(audio) {
+            const controls = document.createElement('div');
+            controls.className = 'grid grid-cols-4 gap-2 w-full';
+            controls.setAttribute('role', 'group');
+            controls.setAttribute('aria-label', 'Salturi în redarea audio');
+            const buttons = [-30, -10, 10, 30].map(seconds => {
+                const button = document.createElement('button');
+                const label = `${seconds < 0 ? 'Înapoi' : 'Înainte'} ${Math.abs(seconds)} secunde`;
+                button.type = 'button';
+                button.disabled = true;
+                button.className = 'min-h-[44px] px-2 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition';
+                button.setAttribute('aria-label', label);
+                button.title = label;
+                button.innerHTML = `<i aria-hidden="true" class="fa-solid ${seconds < 0 ? 'fa-rotate-left' : 'fa-rotate-right'} mr-1"></i>${seconds > 0 ? '+' : '−'}${Math.abs(seconds)} s`;
+                button.addEventListener('click', () => {
+                    if (audio.readyState === 0 || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+                    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+                });
+                controls.appendChild(button);
+                return button;
+            });
+            const updateControls = () => {
+                const disabled = audio.readyState === 0 || !Number.isFinite(audio.duration) || audio.duration <= 0;
+                buttons.forEach(button => button.disabled = disabled);
+            };
+            ['loadedmetadata', 'durationchange', 'emptied'].forEach(event => audio.addEventListener(event, updateControls));
+            audio.after(controls);
+            updateControls();
+        }
+
+        async function previewItem(id, push = true) {
+            const generation = ++navigationGeneration;
+            const item = viewFiles.find(i => i.id === id) || await getItemFromDB(id);
+            if (generation !== navigationGeneration) return;
+            if (!item || item.isFolder) {
+                if (!push) writeRoute(currentFolderId, null, true);
+                showToast('Documentul nu mai este disponibil.', 'error');
+                return;
+            }
+            const cat = fileCategory(item);
+            viewerList = viewFiles.filter(i => fileCategory(i) === cat);
+            if (!viewerList.some(i => i.id === id)) viewerList = [item];
+            viewerIndex = viewerList.findIndex(i => i.id === id);
+            if (push) writeRoute(currentFolderId, item.id, false, true);
+            await showViewer();
+        }
+
+        async function showViewer() {
+            const item = viewerList[viewerIndex];
+            if (!item) return;
+            previewController?.abort();
+            const controller = previewController = new AbortController();
+            const body = document.getElementById('previewBody');
+            const oldMedia = body.querySelector('audio, video');
+            if (oldMedia) { oldMedia.pause(); oldMedia.removeAttribute('src'); oldMedia.load(); }
+            body.innerHTML = '<p role="status" class="text-slate-500">Se deschide documentul…</p>';
+            const cat = fileCategory(item);
+            const documentType = window.drive.documentType(item);
+            zoom = 1; panX = panY = 0;
+            document.getElementById('zoomLabel').innerText = '100%';
+            const tools = document.getElementById('zoomTools');
+            tools.classList.toggle('hidden', cat !== 'image'); tools.classList.toggle('flex', cat === 'image');
+            const nt = document.getElementById('openNewTabBtn');
+            const permalink = new URL('/reader.html', location.origin);
+            permalink.searchParams.set('document', item.id);
+            nt.classList.toggle('hidden', !documentType);
+            nt.href = permalink.href;
+            nt.title = 'Deschide documentul în filă nouă';
+            nt.onclick = event => {
+                event.preventDefault();
+                const tab = window.open('about:blank', '_blank');
+                if (!tab) { showToast('Browserul a blocat fila nouă. Permite deschiderea filelor pentru acest site.', 'error'); return; }
+                tab.opener = null;
+                tab.location.replace(permalink.href);
+            };
+            const showAdmin = sessionState.isAdmin && item.status === 'pending';
+            const bar = document.getElementById('viewerAdminBar');
+            bar.classList.toggle('hidden', !showAdmin); bar.classList.toggle('flex', showAdmin);
+            document.getElementById('previewTitle').innerText = item.name;
+            document.getElementById('previewCounter').innerText = `${viewerIndex + 1} / ${viewerList.length}`;
+            ['galleryPrevBtn', 'galleryNextBtn'].forEach(id => document.getElementById(id).disabled = viewerList.length < 2);
+            const folderButton = document.getElementById('previewFolder');
+            folderButton.textContent = 'Folder: Root';
+            folderButton.onclick = () => navigateTo(item.parentId || 'root');
+            getAllItemsFromDB().then(items => {
+                if (controller.signal.aborted) return;
+                const path = [];
+                const visited = new Set();
+                let parentId = item.parentId;
+                while (parentId && parentId !== 'root' && !visited.has(parentId)) {
+                    visited.add(parentId);
+                    const parent = items.find(entry => entry.id === parentId && entry.isFolder);
+                    if (!parent) { path.unshift('Folder indisponibil'); break; }
+                    path.unshift(parent.name);
+                    parentId = parent.parentId;
+                }
+                folderButton.textContent = ['Folder: Root', ...path].join(' / ');
+            }).catch(() => {
+                if (!controller.signal.aborted) folderButton.textContent = 'Folder: calea nu este disponibilă';
+            });
+            document.getElementById('previewModal').classList.remove('hidden');
+            try {
+                if (documentType) {
+                    await window.drive.renderDocument(item, body, { signal: controller.signal });
+                    return;
+                }
+                if (!['image', 'audio', 'video'].includes(cat)) {
+                    body.innerHTML = '<div class="text-center p-6"><p class="font-semibold mb-2">Acest format nu are cititor în website.</p><p class="text-sm text-slate-500">Poți citi PDF, DOCX, XLSX și fișiere text direct aici. Pentru acest fișier, folosește „Descarcă”.</p></div>';
+                    return;
+                }
+                if (!window.drive.inlineType(item)) throw new Error('Browserul nu are un cititor pentru acest format. Fișierul nu este descărcat automat.');
+                if (cat === 'image' && item.size > window.drive.maxInlineSize) throw new Error('Imaginea este prea mare pentru o previzualizare economică. Nu o încărcăm integral automat.');
+                const url = await window.drive.previewUrl(item, controller.signal);
+                if (controller.signal.aborted) return;
+                if (cat === 'image') body.innerHTML = `<img id="zoomImg" draggable="false" src="${url}" alt="${esc(item.name)}" class="max-w-full max-h-full object-contain rounded-xl shadow-lg select-none" style="touch-action:none">`;
+                else if (cat === 'audio') body.innerHTML = `<div class="w-full max-w-lg flex flex-col items-center gap-3"><button id="previewPlayBtn" type="button" class="px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold"><i class="fa-solid fa-play mr-2"></i>Pornește redarea</button><audio hidden controls controlslist="nodownload" preload="none" class="w-full"></audio><p class="text-xs text-center text-slate-500">Redarea transferă conținut pe fragmente numai după Play. Nu se salvează un fișier pe dispozitiv.</p></div>`;
+                else if (cat === 'video') body.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center gap-3"><button id="previewPlayBtn" type="button" class="px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold"><i class="fa-solid fa-play mr-2"></i>Pornește redarea</button><video hidden controls controlslist="nodownload" playsinline preload="none" class="max-w-full max-h-full rounded-xl shadow-lg"></video><p class="text-xs text-center text-slate-500">Conținutul video se încarcă după Play, pe fragmente.</p></div>`;
+                if (cat === 'audio') addAudioSeekControls(body.querySelector('audio'));
+                const playButton = document.getElementById('previewPlayBtn');
+                if (playButton) playButton.onclick = () => {
+                    const media = body.querySelector('audio, video');
+                    if (!media || controller.signal.aborted) return;
+                    media.src = url;
+                    media.hidden = false;
+                    playButton.hidden = true;
+                    media.play().catch(() => {
+                        if (!controller.signal.aborted) { playButton.hidden = false; playButton.textContent = 'Reîncearcă redarea'; }
+                    });
+                };
+                body.querySelector('img, audio, video').addEventListener('error', () => {
+                    if (!controller.signal.aborted) body.innerHTML = '<p class="text-center text-red-700 p-6">Browserul nu poate afișa acest fișier. Reîncearcă sau folosește „Descarcă”.</p>';
+                }, { once: true });
+            } catch (error) {
+                if (controller.signal.aborted) return;
+                body.innerHTML = `<div role="alert" class="text-center p-6"><p class="text-red-700 mb-3">${esc(error.message || 'Documentul nu a putut fi deschis.')}</p><button onclick="showViewer()" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Reîncearcă</button></div>`;
+            } finally {
+                if (!controller.signal.aborted) window.drive.setConnectionStatus('Conectat · stocare comună online');
+            }
+        }
+
+        function navigateGallery(direction) {
+            if (viewerList.length < 2) return;
+            if (viewerList[viewerIndex]) delete viewerList[viewerIndex].blob;
+            viewerIndex = (viewerIndex + direction + viewerList.length) % viewerList.length;
+            writeRoute(currentFolderId, viewerList[viewerIndex].id, true, history.state?.drivePreview);
+            showViewer();
+        }
+
+        function closePreviewModal(updateHistory = true) {
+            if (updateHistory) navigationGeneration++;
+            if (previewController) window.drive.setConnectionStatus('Conectat · stocare comună online');
+            previewController?.abort();
+            previewController = null;
+            viewerList.forEach(item => delete item.blob);
+            viewerList = [];
+            document.getElementById('previewModal').classList.add('hidden');
+            const media = document.getElementById('previewBody').querySelector('audio, video');
+            if (media) { media.pause(); media.removeAttribute('src'); media.load(); }
+            document.getElementById('previewBody').innerHTML = ''; // stops audio/video
+            document.getElementById('viewerBox').classList.remove('viewer-full');
+            if (updateHistory && new URL(location.href).searchParams.has('document')) {
+                writeRoute(currentFolderId, null, true);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('previewModal').classList.contains('hidden')) return;
+            if (e.target.closest?.('input, select, textarea, audio, video')) return;
+            if (e.key === 'ArrowLeft') navigateGallery(-1);
+            else if (e.key === 'ArrowRight') navigateGallery(1);
+            else if (e.key === 'Escape') closePreviewModal();
+        });
+        let zoom = 1, panX = 0, panY = 0, drag = null, tdrag = null, pinch = null, swipeX = null;
+        function applyZoom() {
+            const img = document.getElementById('zoomImg');
+            if (img) { img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`; img.style.cursor = zoom > 1 ? 'grab' : 'zoom-in'; }
+            document.getElementById('zoomLabel').innerText = Math.round(zoom * 100) + '%';
+        }
+        function setZoom(z) { zoom = Math.min(6, Math.max(1, z)); if (zoom === 1) panX = panY = 0; applyZoom(); }
+        function zoomBy(f) { setZoom(zoom * f); }
+        function downloadViewerItem() {
+            const item = viewerList[viewerIndex];
+            if (!item) { showToast('Fișierul nu poate fi descărcat.', 'error'); return; }
+            return window.downloadFeedback.run(() => downloadFile(item));
+        }
+        function toggleViewerFullscreen() { document.getElementById('viewerBox').classList.toggle('viewer-full'); }
+        function viewerDecide(approve) {
+            requireAdmin(async () => {
+                const item = viewerList[viewerIndex];
+                if (!item || item.status !== 'pending') return;
+                if (approve) {
+                    const fresh = await getItemFromDB(item.id);
+                    if (fresh) { fresh.status = 'approved'; await saveItemToDB(fresh); await approveAncestors(fresh); }
+                    showToast('Element aprobat!');
+                } else {
+                    await deleteItemFromDB(item.id);
+                    showToast('Element respins și eliminat!');
+                }
+                selectedPendingIds.delete(item.id);
+                viewerList.splice(viewerIndex, 1);
+                if (!viewerList.length) closePreviewModal();
+                else { viewerIndex = Math.min(viewerIndex, viewerList.length - 1); showViewer(); }
+                renderCurrentView();
+                updatePendingBadge();
+            });
+        }
+        const previewBodyEl = document.getElementById('previewBody');
+        const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        previewBodyEl.addEventListener('wheel', e => {
+            if (!document.getElementById('zoomImg')) return;
+            e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+        }, { passive: false });
+        previewBodyEl.addEventListener('dblclick', e => { if (e.target.id === 'zoomImg') setZoom(zoom > 1 ? 1 : 2.5); });
+        previewBodyEl.addEventListener('mousedown', e => {
+            if (zoom > 1 && e.target.id === 'zoomImg') { drag = { x: e.clientX - panX, y: e.clientY - panY }; e.preventDefault(); }
+        });
+        document.addEventListener('mousemove', e => { if (drag) { panX = e.clientX - drag.x; panY = e.clientY - drag.y; applyZoom(); } });
+        document.addEventListener('mouseup', () => { drag = null; });
+        previewBodyEl.addEventListener('touchstart', e => {
+            if (!document.getElementById('zoomImg')) return;
+            if (e.touches.length === 2) { pinch = { d: dist(e.touches), z: zoom }; swipeX = null; }
+            else if (e.touches.length === 1) {
+                swipeX = e.touches[0].clientX;
+                if (zoom > 1) tdrag = { x: e.touches[0].clientX - panX, y: e.touches[0].clientY - panY };
+            }
+        }, { passive: true });
+        previewBodyEl.addEventListener('touchmove', e => {
+            if (pinch && e.touches.length === 2) setZoom(pinch.z * dist(e.touches) / pinch.d);
+            else if (tdrag && zoom > 1 && e.touches.length === 1) { panX = e.touches[0].clientX - tdrag.x; panY = e.touches[0].clientY - tdrag.y; applyZoom(); }
+        }, { passive: true });
+        previewBodyEl.addEventListener('touchend', e => {
+            if (e.touches.length) return;
+            if (swipeX !== null && zoom === 1 && !pinch) {
+                const dx = e.changedTouches[0].clientX - swipeX;
+                if (Math.abs(dx) > 60) navigateGallery(dx < 0 ? 1 : -1);
+            }
+            swipeX = null; pinch = null; tdrag = null;
+        });
+
+        async function moveItemPrompt(id, event) {
+            event.stopPropagation();
+            requireAdmin(async () => {
+                itemToMoveId = id;
+                const select = document.getElementById('moveFolderSelect');
+                select.innerHTML = `<option value="root">Root (Rădăcină)</option>`;
+                
+                const items = await getAllItemsFromDB();
+                const byId = new Map(items.map(item => [item.id, item]));
+                const moving = byId.get(id);
+                if (!moving) { showToast('Elementul nu mai este disponibil.', 'error'); return; }
+                const forbidden = new Set([id]);
+                const children = new Map();
+                items.forEach(item => {
+                    if (!children.has(item.parentId)) children.set(item.parentId, []);
+                    children.get(item.parentId).push(item.id);
+                });
+                const queue = [id];
+                for (let position = 0; position < queue.length; position++) {
+                    for (const childId of children.get(queue[position]) || []) {
+                        if (!forbidden.has(childId)) { forbidden.add(childId); queue.push(childId); }
+                    }
+                }
+                const pathOf = folder => {
+                    const path = [];
+                    let current = folder;
+                    while (current && path.length < 30) { path.unshift(current.name); current = byId.get(current.parentId); }
+                    return ['Root', ...path].join(' / ');
+                };
+                const folders = items.filter(item => item.isFolder && !forbidden.has(item.id))
+                    .map(folder => ({ id: folder.id, label: pathOf(folder) }))
+                    .sort((first, second) => first.label.localeCompare(second.label, 'ro'));
+                folders.forEach(folder => {
+                    select.add(new Option(folder.label, folder.id));
+                });
+                select.value = moving.parentId || 'root';
+                document.getElementById('moveDescription').textContent = moving.isFolder
+                    ? 'Folderul se mută împreună cu toate fișierele și subfolderele sale. Selectează destinația.'
+                    : 'Selectează folderul destinație.';
+
+                document.getElementById('moveModal').classList.remove('hidden');
+            });
+        }
+
+        function closeMoveModal() {
+            document.getElementById('moveModal').classList.add('hidden');
+            itemToMoveId = null;
+        }
+
+        async function executeMoveItem() {
+            if (!itemToMoveId) return;
+            const targetParentId = document.getElementById('moveFolderSelect').value;
+            try {
+                const item = await getItemFromDB(itemToMoveId);
+                if (!item) throw new Error('Elementul nu mai este disponibil.');
+                if (item.parentId === targetParentId) { closeMoveModal(); return; }
+                item.parentId = targetParentId;
+                await saveItemToDB(item);
+                showToast(item.isFolder ? 'Folderul și întregul conținut au fost mutate!' : 'Element mutat cu succes!');
+                closeMoveModal();
+                await updateBreadcrumbs();
+                await renderCurrentView();
+            } catch (error) {
+                showToast(error.message || 'Mutarea a eșuat.', 'error');
+            }
+        }
+
+        function openAuthModal() {
+            document.getElementById('authPasswordInput').value = '';
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        async function attemptAdminLogin() {
+            const input = document.getElementById('authPasswordInput');
+            try {
+                const state = await window.drive.signIn(document.getElementById('authEmailInput').value, input.value);
+                sessionState.isAuthenticated = state.isAuthenticated;
+                sessionState.isAdmin = state.isAdmin;
+                input.value = '';
+                closeAuthModal();
+                await refreshSharedDrive();
+                showToast(state.isAdmin ? 'Autentificat ca administrator!' : 'Autentificat! Poți modifica linkurile și tabelele publice.');
+            } catch (error) {
+                input.value = '';
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function logoutAdmin() {
+            await window.drive.signOut();
+            sessionState.isAuthenticated = false;
+            sessionState.isAdmin = false;
+            viewerList = [];
+            closePreviewModal();
+            currentView = 'all';
+            await refreshSharedDrive();
+            showToast('Ieșit din cont.');
+        }
+
+        document.getElementById('authPasswordInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') attemptAdminLogin();
+        });
+
+        // Sidebar mobile toggle
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        });
+        document.getElementById('sidebarOverlay').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        });
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Search listener
+        document.getElementById('searchInput').addEventListener('input', () => {
+            renderCurrentView();
+        });
+
+        // Toast Notification Helper
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toastMessage');
+            const icon = document.getElementById('toastIcon');
+
+            msg.innerText = message;
+            if (type === 'error') {
+                icon.className = 'fa-solid fa-circle-exclamation text-red-400';
+            } else {
+                icon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3500);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
