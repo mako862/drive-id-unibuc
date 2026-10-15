@@ -1,0 +1,12 @@
+{
+  "name": "drept-unibuc-drive",
+  "version": "3.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Drept UniBuc Cloud Drive — Cloudflare (Pages sau Workers) + R2 (fișiere) + Neon Postgres (metadate). Fără dependențe de instalat.",
+  "scripts": {
+    "dev": "npx wrangler pages dev",
+    "dev:workers": "npx wrangler dev -c wrangler.workers.toml",
+    "schema": "node scripts/generate-schema.mjs"
+  }
+}

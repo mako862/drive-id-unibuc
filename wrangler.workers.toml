@@ -1,0 +1,18 @@
+# Cloudflare WORKERS (alternativă la Pages). Folosește-l DOAR dacă proiectul tău din Cloudflare este de tip Workers.
+# În proiectul Workers, la Build -> „Deploy command" pune:
+#   npx wrangler@4 deploy -c wrangler.workers.toml
+# „name" trebuie să fie identic cu numele proiectului Workers din Cloudflare.
+name = "drept-unibuc-drive"
+main = "src/worker.js"
+compatibility_date = "2026-01-01"
+keep_vars = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# Doar /api/* pornește codul; restul (site-ul) se servește direct din fișiere.
+run_worker_first = ["/api/*"]
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "drept-unibuc-files"
