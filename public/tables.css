@@ -1,0 +1,107 @@
+/* ===== Tabele publice ===== */
+
+/* afișare */
+.pt-wrap { overflow: auto; max-height: 70vh; border: 1px solid #e2e8f0; border-radius: 12px; }
+.pt-table { border-collapse: collapse; font-size: 14px; line-height: 1.4; width: max-content; min-width: 100%; }
+.pt-table.pt-fixed { table-layout: fixed; min-width: 0; }
+.pt-table th, .pt-table td {
+  border: 1px solid #e2e8f0; padding: 4px 10px; vertical-align: top; height: 36px;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.pt-table th { background: #f1f5f9; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+.pt-table tr:nth-child(even) td { background: #f8fafc; }
+
+/* linkuri din celule: albastre și subliniate (Tailwind le resetează, de aceea sunt forțate aici) */
+.pt-table a, .pt-view a, .pt-prop a {
+  color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; overflow-wrap: anywhere;
+}
+.pt-table a:hover, .pt-view a:hover, .pt-prop a:hover { color: #1d4ed8; }
+
+/* „propune modificare”: mic și discret */
+.pt-propose {
+  background: none; border: 0; padding: 2px 4px; cursor: pointer;
+  font-size: 11px; color: #94a3b8; text-decoration: underline; text-underline-offset: 2px;
+}
+.pt-propose:hover { color: #475569; }
+.pt-badge {
+  background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 999px;
+  padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.pt-badge:hover { background: #fde68a; }
+.pt-flash {
+  background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 12px;
+  padding: 10px 14px; font-size: 14px;
+}
+
+/* diferențe (aprobare) */
+.pt-diff td.pt-add, .pt-diff th.pt-add { background: #dcfce7; }
+.pt-diff td.pt-del, .pt-diff th.pt-del { background: #fee2e2; text-decoration: line-through; color: #991b1b; }
+.pt-diff td.pt-mod, .pt-diff th.pt-mod { background: #fef9c3; }
+.pt-old { text-decoration: line-through; color: #94a3b8; font-size: 12px; }
+.pt-old a, .pt-table .pt-old a { color: inherit; text-decoration: line-through; }
+
+/* ferestre (editor + aprobare) */
+.pt-dialog {
+  border: 0; border-radius: 16px; padding: 0; width: min(1100px, 96vw); max-height: 92vh;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .35); color: #0f172a; font-family: inherit;
+}
+.pt-dialog::backdrop { background: rgba(15, 23, 42, .5); }
+.pt-editor { display: flex; flex-direction: column; gap: 10px; padding: 18px; max-height: 92vh; }
+.pt-ed-head { display: flex; align-items: center; justify-content: space-between; }
+.pt-ed-head h3 { font-size: 18px; font-weight: 700; margin: 0; }
+.pt-x { background: none; border: 0; font-size: 26px; line-height: 1; cursor: pointer; color: #64748b; }
+.pt-field { display: block; font-size: 12px; font-weight: 600; color: #334155; }
+.pt-field input, .pt-field textarea {
+  display: block; width: 100%; margin-top: 4px; padding: 8px 12px; font: 400 14px/1.4 inherit;
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px;
+}
+.pt-static { margin: 0; font-weight: 600; }
+.pt-hint { margin: 0; font-size: 12px; color: #64748b; }
+.pt-error { margin: 0; font-size: 14px; color: #b91c1c; }
+.pt-warn { margin: 0; font-size: 13px; color: #92400e; background: #fef3c7; border-radius: 10px; padding: 8px 10px; }
+.pt-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pt-toolbar button, .pt-linkbar button, .pt-btn {
+  border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 6px 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer; color: #334155;
+}
+.pt-toolbar button:hover, .pt-linkbar button:hover, .pt-btn:hover { background: #f1f5f9; }
+.pt-btn.pt-primary { background: #2563eb; border-color: #2563eb; color: #fff; padding: 8px 16px; }
+.pt-btn.pt-primary:hover { background: #1d4ed8; }
+.pt-btn:disabled { opacity: .6; cursor: default; }
+.pt-sep { width: 1px; height: 22px; background: #e2e8f0; margin: 0 4px; }
+.pt-linkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #eff6ff; border-radius: 12px; padding: 8px; }
+.pt-linkbar[hidden], .pt-field[hidden], .pt-static[hidden], .pt-error[hidden], .pt-toolbar button[hidden] { display: none; }
+.pt-linkbar input { flex: 1 1 240px; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 10px; font-size: 14px; }
+.pt-linkerr { color: #b91c1c; font-size: 12px; }
+.pt-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.pt-foot .pt-hint { margin-right: auto; }
+
+/* grila de editare (tip Excel) */
+.pt-grid-wrap { overflow: auto; flex: 1 1 auto; min-height: 140px; max-height: 52vh; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.pt-grid { border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.pt-grid col.pt-gutter { width: 44px; }
+.pt-grid th, .pt-grid td { border: 1px solid #e2e8f0; padding: 0; position: relative; vertical-align: top; }
+.pt-grid thead th { position: sticky; top: 0; z-index: 3; background: #f1f5f9; height: 24px; font-size: 11px; color: #64748b; text-align: center; font-weight: 600; }
+.pt-grid .pt-rowhead { position: sticky; left: 0; z-index: 2; background: #f1f5f9; width: 44px; font-size: 11px; color: #64748b; text-align: center; font-weight: 600; vertical-align: middle; }
+.pt-grid .pt-corner { left: 0; z-index: 4; }
+.pt-grid .pt-sel { background: #dbeafe !important; color: #1d4ed8; }
+.pt-grid tr.pt-first td { background: #f8fafc; font-weight: 600; }
+.pt-grid td.pt-active { background: #eff6ff; }
+.pt-view { padding: 4px 10px; min-height: 28px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; outline: none; }
+.pt-edit {
+  display: block; width: 100%; min-height: 28px; padding: 4px 10px; border: 0; resize: none; overflow: hidden;
+  font: inherit; line-height: 1.4; background: #fff; outline: 2px solid #3b82f6; outline-offset: -2px;
+}
+.pt-view[hidden], .pt-edit[hidden] { display: none !important; }
+.pt-handle { position: absolute; z-index: 5; touch-action: none; }
+.pt-handle.col { top: 0; right: -5px; width: 11px; height: 100%; cursor: col-resize; }
+.pt-handle.row { left: 0; bottom: -5px; width: 100%; height: 11px; cursor: row-resize; }
+.pt-handle:hover, .pt-handle.active { background: rgba(59, 130, 246, .5); }
+
+/* ecranul de aprobare */
+.pt-rev-body { overflow: auto; display: flex; flex-direction: column; gap: 18px; }
+.pt-prop { border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.pt-prop-meta { margin: 0; font-size: 12px; color: #64748b; }
+.pt-prop-note { margin: 0; font-size: 14px; font-style: italic; }
+.pt-prop-sum { margin: 0; font-size: 13px; font-weight: 600; }
+.pt-prop-actions { display: flex; gap: 8px; }
