@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ro" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Drept Anul I - Platformă Colaborativă</title>
+    <meta name="robots" content="noindex">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        juridical: {
+                            50: '#f0f4f8',
+                            100: '#d9e2ec',
+                            500: '#334e68',
+                            800: '#102a43',
+                            900: '#0b1b2b',
+                            gold: '#d4af37',
+                            amber: '#f59e0b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .gold-border-glow {
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950 overflow-x-hidden">
+
+    <!-- Notification Toast Container (Z-Index maxim ca erorile să fie mereu deasupra) -->
+    <div id="toast-container" class="fixed top-20 right-4 z-[90] flex flex-col gap-2 max-w-md w-[90%] sm:w-auto"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo / Title -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('quiz-setup')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-md shrink-0">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-sm sm:text-lg font-bold tracking-tight text-white flex items-center gap-2 truncate">
+                            Quiz Drept <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-semibold shrink-0">Anul I</span>
+                        </h1>
+                        <p class="text-xs text-slate-400 hidden sm:block">Platformă de Studiu & Colaborare</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1">
+                    <button id="nav-quiz-setup" onclick="switchTab('quiz-setup')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                        <i class="fa-solid fa-play mr-1.5"></i> Mod Exersare
+                    </button>
+                    <button id="nav-questions-bank" onclick="switchTab('questions-bank')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all">
+                        <i class="fa-solid fa-database mr-1.5"></i> Bază Întrebări (<span id="total-q-badge">0</span>)
+                    </button>
+                    <button id="nav-proposals" onclick="switchTab('proposals')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all">
+                        <i class="fa-solid fa-lightbulb mr-1.5 text-amber-400"></i> Propuneri (<span id="total-p-badge">0</span>)
+                    </button>
+                    <button id="nav-backup" onclick="switchTab('backup')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all">
+                        <i class="fa-solid fa-file-arrow-up mr-1.5"></i> Import / Export
+                    </button>
+                    <button id="nav-stats" onclick="switchTab('stats')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all">
+                        <i class="fa-solid fa-chart-column mr-1.5"></i> Statistici
+                    </button>
+                </nav>
+
+                <!-- Status & Action Indicator -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div id="connection-status" class="hidden sm:flex items-center text-xs px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2" id="status-dot"></span>
+                        <span id="status-text">Conectare...</span>
+                    </div>
+                    <!-- Admin Button -->
+                    <button id="btn-admin" onclick="adminButtonClick()" title="Autentificare administrator" class="px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+                        <i class="fa-solid fa-user-shield sm:mr-1.5"></i> <span id="btn-admin-label" class="hidden sm:inline">Admin</span>
+                    </button>
+                    <!-- Settings Button -->
+                    <button onclick="openSettings()" title="Setări categorii" class="px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+                        <i class="fa-solid fa-gear sm:mr-1.5"></i> <span class="hidden sm:inline">Setări</span>
+                    </button>
+                    <!-- Propose Question Button -->
+                    <button onclick="openQuestionModal(true)" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 px-3.5 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center shadow-md hover:shadow-amber-500/20 transition-all">
+                        <i class="fa-solid fa-lightbulb sm:mr-1.5"></i> <span class="hidden sm:inline">Propune Grilă</span><span class="sm:hidden">Propune</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Nav Bar -->
+        <div class="md:hidden flex border-t border-slate-800 bg-slate-900/90 text-[10px] sm:text-xs">
+            <button onclick="switchTab('quiz-setup')" class="flex-1 py-2 text-center text-amber-400 font-medium border-b-2 border-amber-400 truncate px-1">
+                <i class="fa-solid fa-play block mb-1 text-xs"></i> Exersare
+            </button>
+            <button onclick="switchTab('questions-bank')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+                <i class="fa-solid fa-database block mb-1 text-xs"></i> Întrebări
+            </button>
+            <button onclick="switchTab('proposals')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+                <i class="fa-solid fa-lightbulb block mb-1 text-xs text-amber-400"></i> Propuneri
+            </button>
+            <button onclick="switchTab('backup')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+                <i class="fa-solid fa-file-arrow-up block mb-1 text-xs"></i> Backup
+            </button>
+            <button onclick="switchTab('stats')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+                <i class="fa-solid fa-chart-column block mb-1 text-xs"></i> Statistici
+            </button>
+            <button onclick="openSettings()" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+                <i class="fa-solid fa-gear block mb-1 text-xs"></i> Setări
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ================= TAB 1: QUIZ SETUP & TUTORIAL ================= -->
+        <section id="tab-quiz-setup" class="space-y-6">
+            
+            <!-- Tutorial & Scurtături Section -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-circle-question text-amber-400"></i> Tutorial & Scurtături de Tastatură
+                    </h3>
+                    <span class="text-xs text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 font-semibold">Ghid rapid</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                    <div class="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                        <div class="font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-play"></i> Cum funcționează?</div>
+                        <ul class="space-y-1.5 list-disc list-inside text-slate-400 leading-relaxed">
+                            <li>Alege anul de studiu, semestrul și materia dorită din opțiunile de mai jos.</li>
+                            <li>Bifează răspunsurile corecte în timpul testului (unele grile au mai multe variante corecte).</li>
+                            <li>Apasă pe <strong class="text-slate-200">Validează Răspunsul</strong> pentru a vedea explicația juridică și articolele relevante.</li>
+                            <li>Folosește butonul <strong class="text-amber-400">Propune Grilă</strong> din meniul superior pentru a contribui cu întrebări noi sau modificări.</li>
+                        </ul>
+                    </div>
+                    <div class="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                        <div class="font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-keyboard"></i> Scurtături de tastatură utile</div>
+                        <ul class="space-y-1.5 list-disc list-inside text-slate-400 leading-relaxed">
+                            <li>Tastele <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 font-mono">1-6</kbd> sau <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 font-mono">A-F</kbd>: Selectează sau deselectează rapid opțiunile de răspuns.</li>
+                            <li>Tasta <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-200 font-mono">Enter</kbd>: Validează răspunsul curent sau avansează direct la următoarea întrebare.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Setup Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="max-w-3xl mx-auto space-y-6">
+                    <div class="text-center space-y-2">
+                        <h2 class="text-xl sm:text-3xl font-bold text-white tracking-tight">Configurare Sesiune de Exersare</h2>
+                        <p class="text-slate-400 text-sm">Alege materia, semestrul și opțiunile de amestecare pentru a începe testul.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                        <!-- Select An -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-graduation-cap text-amber-400 mr-1.5"></i> An de studiu
+                            </label>
+                            <select id="cfg-year" onchange="refreshCategorySelects()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm">
+                            </select>
+                        </div>
+
+                        <!-- Select Semestru -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-calendar-days text-amber-400 mr-1.5"></i> Semestru
+                            </label>
+                            <select id="cfg-semester" onchange="refreshCategorySelects()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm">
+                                <option value="ALL">Toate Semestrele</option>
+                                <option value="1">Semestrul 1</option>
+                                <option value="2">Semestrul 2</option>
+                            </select>
+                        </div>
+
+                        <!-- Select Materie -->
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-book text-amber-400 mr-1.5"></i> Categorie / Materie Juridică
+                            </label>
+                            <select id="cfg-subject" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm">
+                                <option value="ALL">Toate Materiile (Mixat)</option>
+                            </select>
+                        </div>
+
+                        <!-- Numar Intrebari -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-list-check text-amber-400 mr-1.5"></i> Număr Întrebări Sesiune
+                            </label>
+                            <select id="cfg-count" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm">
+                                <option value="20">20 Grilaje</option>
+                                <option value="40">40 Grilaje</option>
+                                <option value="60">60 Grilaje</option>
+                                <option value="80">80 Grilaje</option>
+                                <option value="100">100 Grilaje</option>
+                                <option value="ALL" selected>Toate Întrebările Disponibile</option>
+                            </select>
+                        </div>
+
+                        <!-- Local Shuffle Options -->
+                        <div class="space-y-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800 flex flex-col justify-center">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                <i class="fa-solid fa-shuffle text-amber-400 mr-1.5"></i> Reglaje Amestecare Locală
+                            </label>
+                            <label class="flex items-center justify-between cursor-pointer group">
+                                <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Amestecă ordinea întrebărilor</span>
+                                <input type="checkbox" id="cfg-shuffle-questions" checked class="w-5 h-5 rounded border-slate-700 text-amber-500 focus:ring-amber-500 accent-amber-500">
+                            </label>
+                            <label class="flex items-center justify-between cursor-pointer group">
+                                <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Amestecă opțiunile de răspuns</span>
+                                <input type="checkbox" id="cfg-shuffle-options" checked class="w-5 h-5 rounded border-slate-700 text-amber-500 focus:ring-amber-500 accent-amber-500">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Start Button -->
+                    <div class="pt-4">
+                        <button onclick="startQuiz()" class="w-full py-4 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-base sm:text-lg rounded-xl shadow-xl hover:shadow-amber-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-graduation-cap text-xl"></i> Începe Sesiunea de Exersare
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: ACTIVE QUIZ VIEW ================= -->
+        <section id="tab-quiz-active" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start flex-wrap gap-2">
+                    <button onclick="confirmExitQuiz()" class="text-slate-400 hover:text-red-400 transition-colors p-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-xmark text-sm"></i> Părăsește
+                    </button>
+                    <button onclick="proposeCurrentQuizQuestion()" class="text-amber-300 hover:text-amber-200 transition-colors p-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold flex items-center gap-1.5" title="Propune o modificare pentru această întrebare">
+                        <i class="fa-solid fa-lightbulb text-amber-400 text-sm"></i> Propune modificare
+                    </button>
+                    <div class="text-left">
+                        <span id="quiz-subject-badge" class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">TGD</span>
+                        <span id="quiz-sem-badge" class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300 ml-2">Sem 1</span>
+                    </div>
+                </div>
+
+                <div class="w-full md:max-w-md space-y-1.5">
+                    <div class="flex justify-between text-xs text-slate-400 font-medium">
+                        <span>Progres Sesiune</span>
+                        <span id="quiz-counter">Întrebarea 1 din 10</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                        <div id="quiz-progress-fill" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-300" style="width: 10%;"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-xs font-semibold">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> <span id="quiz-score-correct">0</span> Corecte
+                    </div>
+                    <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                        <i class="fa-solid fa-xmark"></i> <span id="quiz-score-wrong">0</span> Greșite
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div id="question-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl space-y-6 relative">
+                <div id="badge-multi-correct" class="hidden inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                    <i class="fa-solid fa-bolt text-amber-400"></i> Mai mult de un răspuns corect
+                </div>
+
+                <div class="space-y-2">
+                    <p id="quiz-question-text" class="text-base sm:text-xl font-semibold text-white leading-relaxed">
+                        Se încarcă întrebarea...
+                    </p>
+                </div>
+
+                <div id="quiz-options-container" class="space-y-3 pt-2"></div>
+
+                <div id="quiz-explanation-box" class="hidden bg-slate-950 border border-amber-500/30 rounded-xl p-5 space-y-2 text-sm transition-all animate-fadeIn">
+                    <div class="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-wider text-xs">
+                        <i class="fa-solid fa-book-bookmark text-base"></i> Explicație Juridică
+                    </div>
+                    <p id="quiz-explanation-text" class="text-slate-300 leading-relaxed italic"></p>
+                </div>
+
+                <div class="pt-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-slate-800/80">
+                    <span class="text-xs text-slate-500 hidden sm:inline-block">
+                        <i class="fa-regular fa-keyboard mr-1"></i> Apasă <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">1-6</kbd> / <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">A-F</kbd> și <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Enter</kbd>
+                    </span>
+
+                    <button id="btn-submit-answer" onclick="submitCurrentAnswer()" class="w-full sm:w-auto px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg hover:shadow-amber-500/20 flex items-center justify-center gap-2">
+                        Validează Răspunsul <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <button id="btn-next-question" onclick="nextQuestion()" class="hidden w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2">
+                        Următoarea Întrebare <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: QUIZ RESULTS ================= -->
+        <section id="tab-quiz-results" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-2xl text-center space-y-6 max-w-3xl mx-auto">
+                <div class="w-20 h-20 mx-auto rounded-full bg-amber-500/20 border-2 border-amber-500 text-amber-400 flex items-center justify-center text-3xl shadow-lg">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+
+                <div class="space-y-2">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">Sesiune Finalizată!</h2>
+                    <p class="text-slate-400 text-sm">Felicitări! Iată centralizarea performanței tale juridice.</p>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="space-y-1">
+                        <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Punctaj Obținut</span>
+                        <p id="res-score-percent" class="text-3xl font-black text-amber-400">0%</p>
+                    </div>
+                    <div class="space-y-1">
+                        <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Răspunsuri Corecte</span>
+                        <p id="res-correct-count" class="text-3xl font-black text-emerald-400">0 / 0</p>
+                    </div>
+                    <div class="space-y-1">
+                        <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Nota Estimată</span>
+                        <p id="res-grade" class="text-3xl font-black text-white">1.00</p>
+                    </div>
+                </div>
+
+                <div id="res-feedback-text" class="text-slate-300 text-sm bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">--</div>
+
+                <div id="res-missed-wrap" class="hidden text-left space-y-3">
+                    <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-circle-xmark text-red-400"></i> Întrebări greșite (<span id="res-missed-count">0</span>)</h3>
+                    <div id="res-missed-list" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+                    <button id="btn-repeat-missed" onclick="repeatMissed()" class="hidden px-6 py-3 bg-red-500/15 hover:bg-red-500/25 text-red-300 font-bold rounded-xl transition-all border border-red-500/30">
+                        <i class="fa-solid fa-bullseye mr-1.5"></i> Repetă greșitele
+                    </button>
+                    <button id="btn-restart-session" onclick="restartSession()" class="hidden px-6 py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-xl transition-all border border-slate-700">
+                        <i class="fa-solid fa-shuffle mr-1.5"></i> Reia sesiunea (amestecat)
+                    </button>
+                    <button onclick="switchTab('quiz-setup')" class="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-all shadow-md">
+                        <i class="fa-solid fa-rotate-right mr-1.5"></i> Alt Test
+                    </button>
+                    <button onclick="switchTab('questions-bank')" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-all border border-slate-700">
+                        <i class="fa-solid fa-database mr-1.5"></i> Vezi Baza de Întrebări
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: QUESTIONS BANK ================= -->
+        <section id="tab-questions-bank" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-amber-400"></i> Bază Sincronizată de Întrebări Grilă
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Baza de întrebări comună. Puteți selecta și șterge întrebări în lot (necesită autentificare de administrator).</p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                    <button onclick="openQuestionModal(true)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+                        <i class="fa-solid fa-lightbulb"></i> Propune Grilă
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <input type="text" id="bank-search" oninput="renderQuestionsBank()" placeholder=" Caută în întrebări sau explicații..." class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 outline-none">
+
+                <select id="bank-year-filter" onchange="refreshCategorySelects()" class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></select>
+
+                <select id="bank-sem-filter" onchange="refreshCategorySelects()" class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="ALL">Toate Semestrele</option>
+                    <option value="1">Semestrul 1</option>
+                    <option value="2">Semestrul 2</option>
+                </select>
+
+                <select id="bank-subject-filter" onchange="renderQuestionsBank()" class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="ALL">Toate Materiile</option>
+                </select>
+            </div>
+
+            <!-- Bulk Selection Toolbar -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm text-slate-300 font-medium cursor-pointer select-none">
+                        <input type="checkbox" id="select-all-q-checkbox" onchange="toggleSelectAllQuestions(this.checked)" class="w-4 h-4 rounded border-slate-700 text-amber-500 focus:ring-amber-500 accent-amber-500">
+                        <span>Selectează toate întrebările afișate</span>
+                    </label>
+                    <span id="selected-count-badge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full font-semibold hidden">0 selectate</span>
+                </div>
+                <button id="btn-bulk-delete" onclick="bulkDeleteQuestions()" disabled class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-semibold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-trash-can"></i> Șterge Selecția (<span id="bulk-delete-count">0</span>)
+                </button>
+            </div>
+
+            <!-- Questions List -->
+            <div id="questions-list-container" class="space-y-4"></div>
+        </section>
+
+        <!-- ================= TAB 5: PROPOSALS (APROBARE ADMIN) ================= -->
+        <section id="tab-proposals" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i> Propuneri în Așteptare & Voturi
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Aici apar întrebările și modificările propuse de colegi. Poți da Like sau Dislike (o singură dată).</p>
+                </div>
+                <button onclick="openQuestionModal(true)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
+                    <i class="fa-solid fa-plus"></i> Trimite o Propunere
+                </button>
+            </div>
+
+            <!-- Proposals Search Bar -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                <input type="text" id="proposals-search" oninput="renderProposalsList()" placeholder=" Caută în propuneri, explicații sau notițe..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 outline-none">
+            </div>
+
+            <div id="proposals-list-container" class="space-y-4"></div>
+        </section>
+
+        <!-- ================= TAB 6: BACKUP & JSON ================= -->
+        <section id="tab-backup" class="hidden space-y-6 max-w-4xl mx-auto">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-file-export text-amber-400"></i> Import & Export JSON
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Salvează baza de date pe calculatorul tău sau importă grile noi din fișiere JSON externe.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Export Card -->
+                    <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-download"></i>
+                        </div>
+                        <h3 class="font-bold text-white">Exportă Baza de Întrebări</h3>
+                        <p class="text-xs text-slate-400">Descarcă întrebările și variantele de răspuns (format reimportabil), sau un backup complet cu propuneri și categorii.</p>
+                        <button onclick="exportJSON()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl border border-slate-700 transition-all text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-arrow-down"></i> Descarcă întrebările (JSON)
+                        </button>
+                        <button onclick="exportFullBackup()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold rounded-xl border border-slate-700 transition-all text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-box-archive"></i> Backup complet (cu propuneri)
+                        </button>
+                    </div>
+
+                    <!-- Import Card -->
+                    <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-upload"></i>
+                        </div>
+                        <h3 class="font-bold text-white">Importă Fișier JSON (Protejat)</h3>
+                        <p class="text-xs text-slate-400">Încarcă întrebări dintr-un fișier JSON (lista de întrebări sau un backup complet). Același id = actualizare, fără duplicate. Necesită autentificare de administrator.</p>
+                        <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="importJSON(event)">
+                        <button onclick="triggerImportJSON()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-arrow-up"></i> Încarcă JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 7: STATISTICI ================= -->
+        <section id="tab-stats" class="hidden space-y-6 max-w-4xl mx-auto">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-column text-amber-400"></i> Statistici personale</h2>
+                        <p class="text-xs text-slate-400 mt-1">Se păstrează doar pe acest dispozitiv (în browser) și nu sunt trimise nicăieri.</p>
+                    </div>
+                    <button onclick="resetStats()" class="self-start px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition-all"><i class="fa-solid fa-trash-can mr-1.5"></i> Resetează statisticile</button>
+                </div>
+                <div id="stats-content" class="space-y-6"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODAL: SECURE AUTH PROMPT ================= -->
+    <div id="auth-prompt-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 sm:p-8 shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-amber-400"></i> Autentificare Securizată
+                </h3>
+                <button type="button" onclick="closeAuthPrompt()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="submitAuthPrompt(event)" class="space-y-4">
+                <p id="auth-prompt-message" class="text-sm text-slate-300 leading-relaxed">Această acțiune este protejată. Introduceți parola necesară pentru a continua.</p>
+                <div>
+                    <input type="password" id="auth-password-input" autocomplete="current-password" placeholder="Parolă" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none text-sm" required>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeAuthPrompt()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">Anulează</button>
+                    <button type="submit" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-bold transition-all">Confirmă</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: SETTINGS CATEGORIES ================= -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl p-4 sm:p-8 space-y-6 my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-amber-400"></i> Catalog categorii quiz
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Adaugă, editează sau șterge categorii.</p>
+                </div>
+                <button type="button" onclick="closeSettings()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h4 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-key text-amber-400"></i> Parola de administrator</h4>
+                    <button type="button" onclick="signOutAdmin()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition-all"><i class="fa-solid fa-right-from-bracket mr-1.5"></i> Deconectare</button>
+                </div>
+                <p class="text-xs text-slate-400">Parola nu apare nicăieri în cod. După schimbare, celelalte dispozitive conectate sunt deconectate.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input id="pw-current" type="password" autocomplete="current-password" placeholder="Parola actuală" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <input id="pw-new" type="password" autocomplete="new-password" placeholder="Parola nouă (min. 8 caractere)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <input id="pw-new2" type="password" autocomplete="new-password" placeholder="Repetă parola nouă" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <button type="button" onclick="changeAdminPassword()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl text-sm font-bold border border-slate-700 transition-all"><i class="fa-solid fa-floppy-disk mr-1.5"></i> Schimbă parola</button>
+            </div>
+
+            <div id="settings-subjects-list" class="space-y-3"></div>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                <h4 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-plus text-amber-400"></i> Adaugă categorie</h4>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input id="new-category-code" maxlength="30" placeholder="Cod (ex. DP1)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <input id="new-category-label" maxlength="120" placeholder="Denumirea categoriei" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <select id="new-category-year" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></select>
+                    <select id="new-category-semester" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="ALL">Ambele semestre</option>
+                        <option value="1">Semestrul 1</option>
+                        <option value="2">Semestrul 2</option>
+                    </select>
+                </div>
+                <button type="button" onclick="addSubjectCategory()" class="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl text-sm font-bold border border-slate-700 transition-all">
+                    <i class="fa-solid fa-plus mr-1.5"></i> Adaugă în catalog
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between gap-3 pt-3 border-t border-slate-800">
+                <button type="button" onclick="resetSubjectNames()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-rotate-left mr-1.5"></i> Revino la catalogul inițial
+                </button>
+                <div class="flex flex-wrap gap-3 justify-end">
+                    <button type="button" onclick="closeSettings()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">Anulează</button>
+                    <button type="button" onclick="saveSubjectNames()" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-bold transition-all">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> Salvează catalogul
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: ADD / EDIT / PROPOSE QUESTION ================= -->
+    <div id="question-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-4 sm:p-8 space-y-6 my-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <h3 id="modal-title" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i> Propune Întrebare Grilă
+                </h3>
+                <button onclick="closeQuestionModal()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="question-form" onsubmit="saveQuestionForm(event)" class="space-y-5">
+                <input type="hidden" id="form-q-id">
+                <input type="hidden" id="form-target-edit-id">
+                <input type="hidden" id="form-proposal-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">An *</label>
+                        <select id="form-q-year" onchange="refreshCategorySelects()" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Semestru *</label>
+                        <select id="form-q-sem" onchange="refreshCategorySelects()" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                            <option value="1">Semestrul 1</option>
+                            <option value="2">Semestrul 2</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Categorie *</label>
+                        <select id="form-q-subject" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Textul Întrebării *</label>
+                    <textarea id="form-q-text" required rows="3" placeholder="Ex: Capacitatea de folosință a persoanei fizice începe..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                            Variante de Răspuns (1 - 6 variante) *
+                        </label>
+                        <span class="text-xs text-amber-400 font-medium">Bifați opțiunile corecte</span>
+                    </div>
+
+                    <div id="modal-options-list" class="space-y-2.5"></div>
+
+                    <div class="flex justify-between items-center pt-1">
+                        <button type="button" onclick="addOptionRowModal()" id="btn-add-option-modal" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold px-3 py-2 rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Adaugă Variantă
+                        </button>
+                        <span class="text-xs text-slate-500" id="options-count-label">3 / 6 opțiuni</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Explicație Juridică & Referințe (Opțional)</label>
+                    <textarea id="form-q-explanation" rows="2" placeholder="Ex: Art. 35 Cod Civil..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                </div>
+
+                <!-- Căsuță cu notițe pentru propunerea modificării -->
+                <div>
+                    <label class="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-note-sticky mr-1"></i> Notițe / Motivul propunerii (pentru colegi/admin)
+                    </label>
+                    <textarea id="form-q-proposal-notes" rows="2" placeholder="Scrie aici de ce propun această grilă sau modificare..." class="w-full bg-slate-950 border border-amber-500/30 rounded-xl p-3.5 text-sm text-white focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeQuestionModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all">
+                        Anulează
+                    </button>
+                    <button type="submit" id="modal-submit-btn" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-bold shadow-md transition-all">
+                        Trimite Propunerea
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/quiz/app.js" defer></script>
+</body>
+</html>
