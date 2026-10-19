@@ -34,18 +34,18 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden" onclick="closeAllContextMenus(event)">
 
-    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-6 z-20 shrink-0">
-        <div class="flex items-center space-x-3">
-            <button id="sidebarToggle" class="lg:hidden text-slate-600 hover:text-blue-600 p-2 rounded-lg hover:bg-slate-100 transition">
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between gap-2 px-3 lg:px-6 z-20 shrink-0">
+        <div class="flex items-center space-x-1 sm:space-x-3 min-w-0">
+            <button id="sidebarToggle" class="lg:hidden shrink-0 text-slate-600 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
                 <i class="fa-solid fa-bars text-lg"></i>
             </button>
-            <div class="flex items-center space-x-2">
-                <div class="bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
+            <div class="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
+                <div class="bg-blue-600 text-white w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
                     <i class="fa-solid fa-scale-balanced"></i>
                 </div>
-                <div>
-                    <h1 class="font-bold text-slate-900 text-lg leading-tight">Drept UniBuc</h1>
-                    <span class="text-xs text-slate-500 font-medium">BETA Drive Workspace</span>
+                <div class="min-w-0">
+                    <h1 class="font-bold text-slate-900 text-lg leading-tight truncate">Drept UniBuc</h1>
+                    <span class="block text-xs leading-4 text-slate-500 font-medium truncate">BETA Drive Workspace</span>
                 </div>
             </div>
         </div>
@@ -57,12 +57,16 @@
             </div>
         </div>
 
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            <a href="/quiz/" id="quizLinkHeader" title="Deschide Quiz-ul de repetiție" aria-label="Quiz de repetiție" class="hidden sm:inline-flex items-center lg:space-x-2 px-3 lg:px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-sm font-semibold transition">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span class="hidden lg:inline">Quiz</span>
+            </a>
             <div id="authStatusBadge" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">
                 <i class="fa-solid fa-user"></i>
                 <span id="authStatusText">Utilizator Standard</span>
             </div>
-            <button id="authBtn" onclick="openAuthModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm transition flex items-center space-x-2">
+            <button id="authBtn" onclick="openAuthModal()" class="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow-sm transition flex items-center space-x-2">
                 <i class="fa-solid fa-lock text-xs"></i>
                 <span id="authBtnText">Autentificare</span>
             </button>
@@ -103,6 +107,12 @@
                     <i class="fa-solid fa-table w-5 text-center"></i>
                     <span>Tabele publice</span>
                 </button>
+                <div class="pt-4 text-xs font-semibold text-slate-400 uppercase px-3 pb-2">Alte secțiuni</div>
+                <a href="/quiz/" id="quizLinkSidebar" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition">
+                    <i class="fa-solid fa-graduation-cap w-5 text-center text-amber-500"></i>
+                    <span>Quiz de repetiție</span>
+                    <i class="fa-solid fa-arrow-right ml-auto text-xs text-slate-300"></i>
+                </a>
                 <div class="pt-4 text-xs font-semibold text-slate-400 uppercase px-3 pb-2">Filtre Rapide</div>
                 <button onclick="filterByType('all')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
                     <i class="fa-solid fa-file w-5 text-center text-slate-400"></i>

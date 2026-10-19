@@ -4,6 +4,10 @@
 'use strict';
 
 const API_URL = '/api/quiz';
+// Butoanele din meniu au ACEEAȘI dimensiune activ/inactiv (bordura există mereu, doar culoarea ei se schimbă).
+const NAV_BASE = 'px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all';
+const NAV_IDLE = NAV_BASE + ' border-transparent text-slate-300 hover:text-white hover:bg-slate-800';
+const NAV_ACTIVE = NAV_BASE + ' bg-amber-500/10 text-amber-400 border-amber-500/30';
 const CACHE_KEY = 'quiz_cache_v1';
 const STATS_KEY = 'quiz_stats_v1';
 
@@ -669,7 +673,7 @@ function shuffleArray(list) {
                 if (el) el.classList.add('hidden');
                 const navBtn = document.getElementById(`nav-${t}`);
                 if (navBtn) {
-                    navBtn.className = "px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all";
+                    navBtn.className = NAV_IDLE;
                 }
             });
 
@@ -678,7 +682,8 @@ function shuffleArray(list) {
 
             const activeNavBtn = document.getElementById(`nav-${tabName}`);
             if (activeNavBtn) {
-                activeNavBtn.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all bg-amber-500/10 text-amber-400 border border-amber-500/30";
+                activeNavBtn.className = NAV_ACTIVE;
+                if (activeNavBtn.scrollIntoView) activeNavBtn.scrollIntoView({ inline: 'nearest', block: 'nearest' });
             }
 
             if (tabName === 'questions-bank') renderQuestionsBank();
