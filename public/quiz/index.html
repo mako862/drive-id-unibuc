@@ -72,48 +72,30 @@
                     </div>
                     <div class="min-w-0">
                         <h1 class="text-sm sm:text-lg font-bold tracking-tight text-white flex items-center gap-2 truncate">
-                            Quiz Drept <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-semibold shrink-0">Anul I</span>
+                            Quiz Drept <span class="hidden min-[480px]:block text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-semibold shrink-0">Anul I</span>
                         </h1>
-                        <p class="text-xs text-slate-400 hidden sm:block">Platformă de Studiu & Colaborare</p>
+                        <p class="text-xs text-slate-400 hidden sm:block truncate">Platformă de Studiu & Colaborare</p>
                     </div>
                 </div>
 
-                <!-- Navigation Tabs -->
-                <nav class="hidden md:flex flex-1 min-w-0 overflow-x-auto nav-scroll mx-3"><div class="flex space-x-1 mx-auto shrink-0">
-                    <button id="nav-quiz-setup" onclick="switchTab('quiz-setup')" class="px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all bg-amber-500/10 text-amber-400 border-amber-500/30">
-                        <i class="fa-solid fa-play mr-1.5"></i> Mod Exersare
-                    </button>
-                    <button id="nav-questions-bank" onclick="switchTab('questions-bank')" class="px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
-                        <i class="fa-solid fa-database mr-1.5"></i> Bază Întrebări (<span id="total-q-badge">0</span>)
-                    </button>
-                    <button id="nav-proposals" onclick="switchTab('proposals')" class="px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
-                        <i class="fa-solid fa-lightbulb mr-1.5 text-amber-400"></i> Propuneri (<span id="total-p-badge">0</span>)
-                    </button>
-                    <button id="nav-backup" onclick="switchTab('backup')" class="px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
-                        <i class="fa-solid fa-file-arrow-up mr-1.5"></i> Import / Export
-                    </button>
-                    <button id="nav-stats" onclick="switchTab('stats')" class="px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
-                        <i class="fa-solid fa-chart-column mr-1.5"></i> Statistici
-                    </button>
-                </div></nav>
 
                 <!-- Status & Action Indicator -->
                 <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
-                    <div id="connection-status" class="hidden sm:flex items-center text-xs px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+                    <div id="connection-status" class="hidden xl:flex items-center text-xs px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
                         <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2" id="status-dot"></span>
                         <span id="status-text">Conectare...</span>
                     </div>
                     <!-- Link spre Drive -->
-                    <a href="/" id="driveLinkHeader" title="Înapoi la Drive" class="px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
-                        <i class="fa-solid fa-folder-open sm:mr-1.5"></i> <span class="hidden sm:inline">Drive</span>
+                    <a href="/" id="driveLinkHeader" title="Înapoi la Drive" class="px-3 py-2 rounded-lg font-semibold text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+                        <i class="fa-solid fa-folder-open lg:mr-1.5"></i> <span class="hidden lg:inline">Drive</span>
                     </a>
                     <!-- Admin Button -->
-                    <button id="btn-admin" onclick="adminButtonClick()" title="Autentificare administrator" class="px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
-                        <i class="fa-solid fa-user-shield sm:mr-1.5"></i> <span id="btn-admin-label" class="hidden sm:inline">Admin</span>
+                    <button id="btn-admin" onclick="adminButtonClick()" title="Autentificare administrator" class="px-3 py-2 rounded-lg font-semibold text-sm hidden sm:flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+                        <i class="fa-solid fa-user-shield lg:mr-1.5"></i> <span id="btn-admin-label" class="hidden lg:inline">Admin</span>
                     </button>
                     <!-- Settings Button -->
                     <button onclick="openSettings()" title="Setări categorii" class="px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
-                        <i class="fa-solid fa-gear sm:mr-1.5"></i> <span class="hidden sm:inline">Setări</span>
+                        <i class="fa-solid fa-gear lg:mr-1.5"></i> <span class="hidden lg:inline">Setări</span>
                     </button>
                     <!-- Propose Question Button -->
                     <button onclick="openQuestionModal(true)" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 px-3.5 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center shadow-md hover:shadow-amber-500/20 transition-all">
@@ -123,24 +105,47 @@
             </div>
         </div>
 
+        <!-- Desktop Nav Bar (rând separat, ca pe telefon) -->
+        <div class="hidden md:block border-t border-slate-800 bg-slate-900/90">
+            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex overflow-x-auto nav-scroll">
+                <div class="flex space-x-1 mx-auto shrink-0">
+                    <button id="nav-quiz-setup" onclick="switchTab('quiz-setup')" class="px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all bg-amber-500/10 text-amber-400 border-amber-500/30">
+                        <i class="fa-solid fa-play hidden lg:inline-block lg:mr-1.5"></i> Mod Exersare
+                    </button>
+                    <button id="nav-questions-bank" onclick="switchTab('questions-bank')" class="px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-database hidden lg:inline-block lg:mr-1.5"></i> Bază Întrebări (<span id="total-q-badge">0</span>)
+                    </button>
+                    <button id="nav-proposals" onclick="switchTab('proposals')" class="px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-lightbulb hidden lg:inline-block lg:mr-1.5 text-amber-400"></i> Propuneri (<span id="total-p-badge">0</span>)
+                    </button>
+                    <button id="nav-backup" onclick="switchTab('backup')" class="px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-file-arrow-up hidden lg:inline-block lg:mr-1.5"></i> Import / Export
+                    </button>
+                    <button id="nav-stats" onclick="switchTab('stats')" class="px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all border-transparent text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-chart-column hidden lg:inline-block lg:mr-1.5"></i> Statistici
+                    </button>
+                </div>
+            </nav>
+        </div>
+
         <!-- Mobile Nav Bar -->
-        <div class="md:hidden flex border-t border-slate-800 bg-slate-900/90 text-[10px] sm:text-xs">
-            <button onclick="switchTab('quiz-setup')" class="flex-1 py-2 text-center text-amber-400 font-medium border-b-2 border-amber-400 truncate px-1">
+        <div class="md:hidden flex border-t border-slate-800 bg-slate-900/90 text-[9px] min-[400px]:text-[10px] sm:text-xs">
+            <button onclick="switchTab('quiz-setup')" class="flex-auto py-2 text-center text-amber-400 font-medium border-b-2 border-amber-400 truncate px-0.5">
                 <i class="fa-solid fa-play block mb-1 text-xs"></i> Exersare
             </button>
-            <button onclick="switchTab('questions-bank')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+            <button onclick="switchTab('questions-bank')" class="flex-auto py-2 text-center text-slate-400 font-medium truncate px-0.5">
                 <i class="fa-solid fa-database block mb-1 text-xs"></i> Întrebări
             </button>
-            <button onclick="switchTab('proposals')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+            <button onclick="switchTab('proposals')" class="flex-auto py-2 text-center text-slate-400 font-medium truncate px-0.5">
                 <i class="fa-solid fa-lightbulb block mb-1 text-xs text-amber-400"></i> Propuneri
             </button>
-            <button onclick="switchTab('backup')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+            <button onclick="switchTab('backup')" class="flex-auto py-2 text-center text-slate-400 font-medium truncate px-0.5">
                 <i class="fa-solid fa-file-arrow-up block mb-1 text-xs"></i> Backup
             </button>
-            <button onclick="switchTab('stats')" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+            <button onclick="switchTab('stats')" class="flex-auto py-2 text-center text-slate-400 font-medium truncate px-0.5">
                 <i class="fa-solid fa-chart-column block mb-1 text-xs"></i> Statistici
             </button>
-            <button onclick="openSettings()" class="flex-1 py-2 text-center text-slate-400 font-medium truncate px-1">
+            <button onclick="openSettings()" class="flex-auto py-2 text-center text-slate-400 font-medium truncate px-0.5">
                 <i class="fa-solid fa-gear block mb-1 text-xs"></i> Setări
             </button>
         </div>

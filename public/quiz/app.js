@@ -5,7 +5,7 @@
 
 const API_URL = '/api/quiz';
 // Butoanele din meniu au ACEEAȘI dimensiune activ/inactiv (bordura există mereu, doar culoarea ei se schimbă).
-const NAV_BASE = 'px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all';
+const NAV_BASE = 'px-2.5 lg:px-3 py-1.5 rounded-lg text-sm font-medium border whitespace-nowrap transition-all';
 const NAV_IDLE = NAV_BASE + ' border-transparent text-slate-300 hover:text-white hover:bg-slate-800';
 const NAV_ACTIVE = NAV_BASE + ' bg-amber-500/10 text-amber-400 border-amber-500/30';
 const CACHE_KEY = 'quiz_cache_v1';
@@ -113,8 +113,8 @@ function updateAdminUI() {
     label.textContent = window.isAdmin ? 'Admin ✓' : 'Admin';
     btn.title = window.isAdmin ? 'Ești autentificat ca administrator (click pentru deconectare)' : 'Autentificare administrator';
     btn.className = window.isAdmin
-        ? 'px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition-all'
-        : 'px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all';
+        ? 'px-3 py-2 rounded-lg font-semibold text-sm hidden sm:flex items-center bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition-all'
+        : 'px-3 py-2 rounded-lg font-semibold text-sm hidden sm:flex items-center bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all';
 }
 
 // Rulează o acțiune de administrator: cere autentificarea dacă e nevoie și afișează erorile.
